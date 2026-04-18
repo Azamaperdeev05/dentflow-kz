@@ -92,7 +92,14 @@ export default async function AppointmentDayPage({ params }: Props) {
       return {
         id: doctor.id,
         name: doctor.user.name,
-        specialization: doctor.specialization,
+        specialization: (() => {
+          try {
+            const specs = JSON.parse(doctor.specializations || "[]") as string[];
+            return specs.join(", ") || "—";
+          } catch {
+            return "—";
+          }
+        })(),
         workHoursStart: doctor.workHoursStart,
         workHoursEnd: doctor.workHoursEnd,
         slotDuration: doctor.slotDuration,

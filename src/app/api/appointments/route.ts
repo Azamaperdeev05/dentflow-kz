@@ -1,3 +1,4 @@
+import { getRequestMeta, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
 import { requirePatient } from "@/lib/session";
@@ -17,7 +18,7 @@ const createAppointmentSchema = z.object({
 
 export async function GET() {
   try {
-    const { patientProfile } = await requirePatient();
+    const { user, patientProfile } = await requirePatient();
 
     const appointments = await prisma.appointment.findMany({
       where: { patientId: patientProfile.id },
@@ -33,6 +34,15 @@ export async function GET() {
       orderBy: { dateTime: "asc" },
     });
 
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_ACCESS",
+      action: "PATIENT_APPOINTMENTS_VIEW",
+      resource: "APPOINTMENT",
+      metadata: { count: appointments.length },
+    });
+
     return Response.json({ appointments });
   } catch (error) {
     if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
@@ -45,7 +55,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { patientProfile } = await requirePatient();
+    const { user, patientProfile } = await requirePatient();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "appointments_create",
       identity: patientProfile.id,
@@ -178,6 +189,21 @@ export async function POST(req: Request) {
         link: "/patient/appointments",
       });
     }
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "PATIENT_APPOINTMENT_CREATE",
+      resource: "APPOINTMENT",
+      resourceId: created.id,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: {
+        doctorId: created.doctor.id,
+        type: created.type,
+      },
+    });
 
     return Response.json({ success: true, appointment: created });
   } catch (error) {

@@ -12,12 +12,12 @@ export async function GET(req: Request) {
 
     const doctors = await prisma.doctorProfile.findMany({
       where: {
-        ...(specialization ? { specialization: { contains: specialization } } : {}),
+        ...(specialization ? { specializations: { contains: specialization } } : {}),
         ...(availableOnly ? { isAvailable: true } : {}),
         ...(q
           ? {
               OR: [
-                { specialization: { contains: q } },
+                { specializations: { contains: q } },
                 { user: { name: { contains: q } } },
               ],
             }

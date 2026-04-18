@@ -1,4 +1,6 @@
+import { getRequestMeta, logAccessDenied, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
+import { canUsersChat } from "@/lib/rbac";
 import { requireSessionUser } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
 import { z } from "zod";
@@ -16,7 +18,23 @@ type Params = {
 
 export async function GET(_: Request, { params }: Params) {
   try {
+    const req = _;
     const user = await requireSessionUser();
+    const requestMeta = getRequestMeta(req);
+
+    const allowed = await canUsersChat(user.id, params.userId);
+    if (!allowed) {
+      await logAccessDenied({
+        userId: user.id,
+        userRole: user.role,
+        action: "CHAT_VIEW_DENIED",
+        resource: "MESSAGE",
+        resourceId: params.userId,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+      });
+      return Response.json({ error: "Рұқсат жоқ" }, { status: 403 });
+    }
 
     const messages = await prisma.message.findMany({
       where: {
@@ -47,6 +65,18 @@ export async function GET(_: Request, { params }: Params) {
       data: { isRead: true },
     });
 
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_ACCESS",
+      action: "CHAT_VIEW",
+      resource: "MESSAGE",
+      resourceId: params.userId,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: { count: messages.length },
+    });
+
     return Response.json({ messages });
   } catch (error) {
     if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
@@ -60,12 +90,27 @@ export async function GET(_: Request, { params }: Params) {
 export async function POST(req: Request, { params }: Params) {
   try {
     const user = await requireSessionUser();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "messages_send",
       identity: `${user.id}_${params.userId}`,
       maxAttempts: 120,
       windowMs: 15 * 60 * 1000,
     });
+
+    const allowed = await canUsersChat(user.id, params.userId);
+    if (!allowed) {
+      await logAccessDenied({
+        userId: user.id,
+        userRole: user.role,
+        action: "CHAT_SEND_DENIED",
+        resource: "MESSAGE",
+        resourceId: params.userId,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+      });
+      return Response.json({ error: "Рұқсат жоқ" }, { status: 403 });
+    }
 
     const body = await req.json();
     const parsed = sendSchema.parse(body);
@@ -93,6 +138,18 @@ export async function POST(req: Request, { params }: Params) {
       body: `${user.name}: ${parsed.content.slice(0, 80)}`,
       type: "MESSAGE",
       link: receiver.role === "DOCTOR" ? `/doctor/chat/${user.id}` : `/patient/chat/${user.id}`,
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "CHAT_SEND",
+      resource: "MESSAGE",
+      resourceId: params.userId,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: { length: parsed.content.length },
     });
 
     return Response.json({ success: true, message });

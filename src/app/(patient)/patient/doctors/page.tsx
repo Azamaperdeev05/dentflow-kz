@@ -19,12 +19,12 @@ export default async function DoctorsPage({ searchParams }: Props) {
 
   const doctors = await prisma.doctorProfile.findMany({
     where: {
-      ...(specialization ? { specialization: { contains: specialization } } : {}),
+      ...(specialization ? { specializations: { contains: specialization } } : {}),
       ...(availableOnly ? { isAvailable: true } : {}),
       ...(q
         ? {
             OR: [
-              { specialization: { contains: q } },
+              { specializations: { contains: q } },
               { user: { name: { contains: q } } },
             ],
           }
@@ -76,7 +76,20 @@ export default async function DoctorsPage({ searchParams }: Props) {
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="text-lg font-bold text-slate-900">{doctor.user.name}</h2>
-                    <p className="mt-1 text-sm font-medium text-cyan-600">{doctor.specialization}</p>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {(() => {
+                        try {
+                          const specs = JSON.parse(doctor.specializations || "[]");
+                          return (specs as string[]).map((spec, i) => (
+                            <span key={i} className="inline-block text-xs font-semibold text-cyan-600 bg-cyan-50 px-2 py-1 rounded">
+                              {spec}
+                            </span>
+                          ));
+                        } catch {
+                          return <span className="text-sm text-slate-500">—</span>;
+                        }
+                      })()}
+                    </div>
                   </div>
                   <span className="text-3xl">👨‍⚕️</span>
                 </div>

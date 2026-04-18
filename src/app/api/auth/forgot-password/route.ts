@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { generateResetCode, getResetExpiry, hashResetCode } from "@/lib/password-reset";
@@ -37,6 +38,14 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
+      await logSecurityEvent({
+        eventType: "AUTH",
+        action: "PASSWORD_RESET_REQUEST",
+        resource: "USER",
+        status: "FAILED",
+        ipAddress: clientIp,
+        metadata: { reason: "USER_NOT_FOUND", email },
+      });
       return successResponse();
     }
 
@@ -69,6 +78,16 @@ export async function POST(req: Request) {
           <p>Код 15 минут ішінде жарамды.</p>
         </div>
       `,
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      eventType: "AUTH",
+      action: "PASSWORD_RESET_REQUEST",
+      resource: "USER",
+      status: "SUCCESS",
+      ipAddress: clientIp,
+      metadata: { email: user.email },
     });
 
     return successResponse();

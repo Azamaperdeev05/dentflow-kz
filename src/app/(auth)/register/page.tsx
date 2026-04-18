@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { registerSchema, type RegisterInput } from "@/lib/validations";
+import { DENTAL_SPECIALIZATIONS } from "@/lib/specializations";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,12 +25,13 @@ export default function RegisterPage() {
     defaultValues: {
       role: "PATIENT",
       phone: "",
-      specialization: "",
+      specializations: [],
       licenseNumber: "",
     },
   });
 
   const role = watch("role");
+  const selectedSpecializations = watch("specializations") || [];
 
   function togglePasswordVisibility() {
     setShowPasswords((prev) => !prev);
@@ -196,16 +198,25 @@ export default function RegisterPage() {
 
             {role === "DOCTOR" && (
               <>
-                <label className="block md:col-span-2">
-                  <span className="mb-1 block text-sm font-semibold text-slate-700">Мамандық</span>
-                  <input
-                    className="h-14 w-full rounded-2xl border border-slate-300 bg-white px-4 text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
-                    {...register("specialization")}
-                  />
-                  {errors.specialization && (
-                    <span className="mt-1 block text-sm text-red-600">{errors.specialization.message}</span>
+                <fieldset className="md:col-span-2">
+                  <span className="mb-3 block text-sm font-semibold text-slate-700">Мамандықтар *</span>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {DENTAL_SPECIALIZATIONS.map((spec) => (
+                      <label key={spec} className="flex items-center gap-3 rounded-xl border border-slate-300 bg-white p-3 cursor-pointer transition hover:bg-slate-50">
+                        <input
+                          type="checkbox"
+                          value={spec}
+                          {...register("specializations")}
+                          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-2"
+                        />
+                        <span className="text-sm font-medium text-slate-700">{spec}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {errors.specializations && (
+                    <span className="mt-2 block text-sm text-red-600">{errors.specializations.message}</span>
                   )}
-                </label>
+                </fieldset>
 
                 <label className="block">
                   <span className="mb-1 block text-sm font-semibold text-slate-700">Тәжірибе (жыл)</span>

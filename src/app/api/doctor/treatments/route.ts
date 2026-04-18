@@ -1,6 +1,8 @@
+import { getRequestMeta, logAccessDenied, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requireDoctor } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
+import { canDoctorAccessPatient } from "@/lib/rbac";
 import { z } from "zod";
 import { stringifyTreatmentMeta, stringifyTreatmentStages, sumStageCosts } from "@/lib/treatment-plan";
 
@@ -17,7 +19,8 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const { doctorProfile } = await requireDoctor();
+    const { user, doctorProfile } = await requireDoctor();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "doctor_treatments_create",
       identity: doctorProfile.id,
@@ -34,6 +37,20 @@ export async function POST(req: Request) {
     }));
     const computedTotalCost = sumStageCosts(stages);
     const totalCost = parsed.totalCost ?? computedTotalCost;
+
+    const allowed = await canDoctorAccessPatient(doctorProfile.id, parsed.patientProfileId);
+    if (!allowed) {
+      await logAccessDenied({
+        userId: user.id,
+        userRole: user.role,
+        action: "TREATMENT_CREATE_DENIED",
+        resource: "TREATMENT",
+        resourceId: parsed.patientProfileId,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+      });
+      return Response.json({ error: "Бұл пациентке емдеу жоспарын құруға рұқсат жоқ" }, { status: 403 });
+    }
 
     const lastAppointment = await prisma.appointment.findFirst({
       where: {
@@ -53,6 +70,21 @@ export async function POST(req: Request) {
         totalCost,
         status: parsed.status,
         notes: stringifyTreatmentMeta({ approvedByPatient: false }),
+      },
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "TREATMENT_CREATE",
+      resource: "TREATMENT",
+      resourceId: treatment.id,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: {
+        patientProfileId: parsed.patientProfileId,
+        stageCount: stages.length,
       },
     });
 

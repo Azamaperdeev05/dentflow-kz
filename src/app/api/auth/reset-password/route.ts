@@ -1,5 +1,6 @@
 import { hash } from "bcryptjs";
 import { Prisma } from "@prisma/client";
+import { logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { hashResetCode } from "@/lib/password-reset";
 import { resetPasswordSchema } from "@/lib/validations";
@@ -30,6 +31,14 @@ export async function POST(req: Request) {
     });
 
     if (!user) {
+      await logSecurityEvent({
+        eventType: "AUTH",
+        action: "PASSWORD_RESET_CONFIRM",
+        resource: "USER",
+        status: "FAILED",
+        ipAddress: clientIp,
+        metadata: { reason: "USER_NOT_FOUND", email },
+      });
       return Response.json({ error: "Email немесе код қате" }, { status: 400 });
     }
 
@@ -47,6 +56,15 @@ export async function POST(req: Request) {
     });
 
     if (!resetRequest) {
+      await logSecurityEvent({
+        userId: user.id,
+        eventType: "AUTH",
+        action: "PASSWORD_RESET_CONFIRM",
+        resource: "USER",
+        status: "FAILED",
+        ipAddress: clientIp,
+        metadata: { reason: "INVALID_OR_EXPIRED_CODE" },
+      });
       return Response.json({ error: "Код жарамсыз немесе мерзімі өтіп кеткен" }, { status: 400 });
     }
 
@@ -62,6 +80,15 @@ export async function POST(req: Request) {
         data: { used: true },
       }),
     ]);
+
+    await logSecurityEvent({
+      userId: user.id,
+      eventType: "AUTH",
+      action: "PASSWORD_RESET_CONFIRM",
+      resource: "USER",
+      status: "SUCCESS",
+      ipAddress: clientIp,
+    });
 
     return Response.json({ success: true, message: "Құпия сөз жаңартылды" });
   } catch (error) {

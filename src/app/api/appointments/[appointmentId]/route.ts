@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
+import { getRequestMeta, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requirePatient } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
@@ -25,6 +26,7 @@ type Params = {
 export async function PATCH(req: Request, { params }: Params) {
   try {
     const { user, patientProfile } = await requirePatient();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "patient_appointments_manage",
       identity: patientProfile.id,
@@ -92,6 +94,17 @@ export async function PATCH(req: Request, { params }: Params) {
           link: "/doctor/schedule",
         });
       }
+
+      await logSecurityEvent({
+        userId: user.id,
+        userRole: user.role,
+        eventType: "DATA_CHANGE",
+        action: "PATIENT_APPOINTMENT_CANCEL",
+        resource: "APPOINTMENT",
+        resourceId: appointment.id,
+        ipAddress: requestMeta.ipAddress,
+        userAgent: requestMeta.userAgent,
+      });
 
       return Response.json({ success: true, appointment: updated });
     }
@@ -195,6 +208,20 @@ export async function PATCH(req: Request, { params }: Params) {
         senderId: user.id,
         receiverId: doctor.userId,
         content: `${user.name} қабылдауын ауыстырды: ${requestedDateTime.toLocaleString("kk-KZ")}`,
+      },
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "PATIENT_APPOINTMENT_RESCHEDULE",
+      resource: "APPOINTMENT",
+      resourceId: appointment.id,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: {
+        newDateTime: requestedDateTime.toISOString(),
       },
     });
 

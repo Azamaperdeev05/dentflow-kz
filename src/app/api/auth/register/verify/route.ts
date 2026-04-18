@@ -61,7 +61,7 @@ export async function POST(req: Request) {
             : {
                 doctorProfile: {
                   create: {
-                    specialization: pending.specialization ?? "Жалпы стоматология",
+                    specializations: pending.specializations ?? JSON.stringify(["Жалпы стоматология"]),
                     experience: pending.experience ?? 0,
                     licenseNumber: pending.licenseNumber,
                   },

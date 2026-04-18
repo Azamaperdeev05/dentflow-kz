@@ -61,8 +61,21 @@ export default async function DoctorProfilePage() {
             <p className="mt-2 text-lg font-bold text-slate-900 break-all">{user.email}</p>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Мамандық</p>
-            <p className="mt-2 text-lg font-bold text-slate-900">{doctorProfile.specialization}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Мамандықтар</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {(() => {
+                try {
+                  const specs = JSON.parse(doctorProfile.specializations || "[]");
+                  return (specs as string[]).map((spec, i) => (
+                    <span key={i} className="inline-block rounded-lg bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-700">
+                      {spec}
+                    </span>
+                  ));
+                } catch {
+                  return <span className="text-slate-500">—</span>;
+                }
+              })()}
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Тәжірибе</p>

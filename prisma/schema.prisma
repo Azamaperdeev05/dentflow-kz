@@ -28,6 +28,59 @@ model User {
   passwordResets   PasswordReset[]
   loginOtps        LoginOtp[]
   notifications    Notification[]
+  securityLogs     SecurityAuditLog[]
+  loginRiskSignals LoginRiskSignal[]
+}
+
+model SecurityAuditLog {
+  id                String   @id @default(cuid())
+  userId            String?
+  userRole          String?
+  eventType         String
+  action            String
+  resource          String
+  resourceId        String?
+  status            String   @default("SUCCESS")
+  riskScore         Int      @default(0)
+  isSuspicious      Boolean  @default(false)
+  ipAddress         String?
+  userAgent         String?
+  deviceFingerprint String?
+  metadata          String?
+  createdAt         DateTime @default(now())
+  user              User?    @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([eventType])
+  @@index([action])
+  @@index([status])
+  @@index([userId])
+  @@index([isSuspicious])
+  @@index([riskScore])
+}
+
+model LoginRiskSignal {
+  id                String   @id @default(cuid())
+  key               String   @unique
+  userId            String?
+  email             String?
+  ipAddress         String
+  userAgent         String?
+  deviceFingerprint String
+  failedAttempts    Int      @default(0)
+  lastAttemptAt     DateTime @default(now())
+  lastSuccessAt     DateTime?
+  riskScore         Int      @default(0)
+  isSuspicious      Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([email])
+  @@index([ipAddress])
+  @@index([isSuspicious])
+  @@index([riskScore])
 }
 
 model LoginOtp {
@@ -76,7 +129,7 @@ model PatientProfile {
 model DoctorProfile {
   id             String        @id @default(cuid())
   userId         String        @unique
-  specialization String
+  specializations String       @default("[]")
   experience     Int           @default(0)
   licenseNumber  String?
   education      String?
@@ -215,7 +268,7 @@ model PendingRegistration {
   phone          String?
   passwordHash   String
   role           String
-  specialization String?
+  specializations String?
   experience     Int?
   licenseNumber  String?
   codeHash       String

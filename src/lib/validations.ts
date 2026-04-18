@@ -19,7 +19,7 @@ export const registerSchema = z
       .regex(/[^A-Za-z0-9]/, "Құпия сөзде кемінде 1 ерекше белгі болуы керек"),
     confirmPassword: z.string(),
     role: roleSchema,
-    specialization: z.string().optional(),
+    specializations: z.array(z.string()).optional(),
     experience: z.number().int().min(0).optional(),
     licenseNumber: z.string().optional(),
   })
@@ -32,11 +32,11 @@ export const registerSchema = z
       });
     }
 
-    if (data.role === "DOCTOR" && !data.specialization?.trim()) {
+    if (data.role === "DOCTOR" && (!data.specializations || data.specializations.length === 0)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["specialization"],
-        message: "Дәрігер үшін мамандық міндетті",
+        path: ["specializations"],
+        message: "Дәрігер үшін кемінде бір мамандық таңдау міндетті",
       });
     }
   });

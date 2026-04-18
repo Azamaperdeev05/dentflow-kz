@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         phone: parsed.phone || null,
         passwordHash: hashedPassword,
         role: parsed.role,
-        specialization: parsed.role === "DOCTOR" ? parsed.specialization?.trim() || null : null,
+        specializations: parsed.role === "DOCTOR" && parsed.specializations?.length ? JSON.stringify(parsed.specializations) : null,
         experience:
           parsed.role === "DOCTOR" && typeof parsed.experience === "number" && Number.isFinite(parsed.experience)
             ? parsed.experience

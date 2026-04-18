@@ -12,5 +12,9 @@ export default async function AuthRedirectPage() {
     redirect("/doctor/dashboard");
   }
 
+  if (session.user.role === "ADMIN") {
+    redirect("/admin/security");
+  }
+
   redirect("/patient/dashboard");
 }

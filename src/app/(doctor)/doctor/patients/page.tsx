@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requireDoctorPage } from "@/lib/session";
 import { DoctorNav } from "@/components/doctor/doctor-nav";
@@ -11,7 +12,7 @@ type Props = {
 };
 
 export default async function DoctorPatientsPage({ searchParams }: Props) {
-  const { doctorProfile } = await requireDoctorPage();
+  const { user, doctorProfile } = await requireDoctorPage();
   const q = searchParams.q?.trim() ?? "";
 
   const appointments = await prisma.appointment.findMany({
@@ -52,6 +53,18 @@ export default async function DoctorPatientsPage({ searchParams }: Props) {
       seen.add(item.id);
       return true;
     });
+
+  await logSecurityEvent({
+    userId: user.id,
+    userRole: user.role,
+    eventType: "DATA_ACCESS",
+    action: "DOCTOR_PATIENT_LIST_VIEW",
+    resource: "PATIENT",
+    metadata: {
+      searchQuery: q,
+      resultCount: patients.length,
+    },
+  });
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row">

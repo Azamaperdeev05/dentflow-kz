@@ -25,11 +25,25 @@ export default auth((req) => {
 
   const role = req.auth.user.role;
   if (pathname.startsWith("/doctor") && role !== "DOCTOR") {
+    if (role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin/security", req.url));
+    }
     return NextResponse.redirect(new URL("/patient/dashboard", req.url));
   }
 
   if (pathname.startsWith("/patient") && role !== "PATIENT") {
+    if (role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin/security", req.url));
+    }
     return NextResponse.redirect(new URL("/doctor/dashboard", req.url));
+  }
+
+  if (pathname.startsWith("/admin") && role !== "ADMIN") {
+    if (role === "DOCTOR") {
+      return NextResponse.redirect(new URL("/doctor/dashboard", req.url));
+    }
+
+    return NextResponse.redirect(new URL("/patient/dashboard", req.url));
   }
 
   return NextResponse.next();

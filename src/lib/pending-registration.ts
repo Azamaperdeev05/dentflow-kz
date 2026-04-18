@@ -6,7 +6,7 @@ type PendingRegistrationData = {
   phone: string | null;
   passwordHash: string;
   role: "PATIENT" | "DOCTOR";
-  specialization: string | null;
+  specializations: string | null;
   experience: number | null;
   licenseNumber: string | null;
   codeHash: string;
@@ -29,7 +29,7 @@ export async function upsertPendingRegistration(data: PendingRegistrationData) {
       phone: data.phone,
       passwordHash: data.passwordHash,
       role: data.role,
-      specialization: data.specialization,
+      specializations: data.specializations,
       experience: data.experience,
       licenseNumber: data.licenseNumber,
       codeHash: data.codeHash,
@@ -42,7 +42,7 @@ export async function upsertPendingRegistration(data: PendingRegistrationData) {
       phone: data.phone,
       passwordHash: data.passwordHash,
       role: data.role,
-      specialization: data.specialization,
+      specializations: data.specializations,
       experience: data.experience,
       licenseNumber: data.licenseNumber,
       codeHash: data.codeHash,
@@ -70,7 +70,7 @@ export async function getPendingRegistration(email: string): Promise<PendingRegi
     phone: pending.phone,
     passwordHash: pending.passwordHash,
     role: pending.role as "PATIENT" | "DOCTOR",
-    specialization: pending.specialization,
+    specializations: pending.specializations,
     experience: pending.experience,
     licenseNumber: pending.licenseNumber,
     codeHash: pending.codeHash,

@@ -1,3 +1,4 @@
+import { getRequestMeta, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requirePatient } from "@/lib/session";
 import { MedicalFileType, validateFile, validateFileSignature } from "@/lib/file-upload";
@@ -11,7 +12,8 @@ function isMedicalFileType(value: string): value is MedicalFileType {
 
 export async function POST(req: Request) {
   try {
-    const { patientProfile } = await requirePatient();
+    const { user, patientProfile } = await requirePatient();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "upload_medical_file",
       identity: patientProfile.id,
@@ -52,6 +54,21 @@ export async function POST(req: Request) {
         name: file.name,
         url: dataUrl,
         type: fileType,
+        size: file.size,
+      },
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "PATIENT_FILE_UPLOAD",
+      resource: "MEDICAL_FILE",
+      resourceId: medicalFile.id,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: {
+        fileType,
         size: file.size,
       },
     });

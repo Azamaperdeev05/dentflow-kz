@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getRequestMeta, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requirePatient } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
@@ -16,7 +17,8 @@ const schema = z.object({
 
 export async function POST(req: Request, { params }: Params) {
   try {
-    const { patientProfile } = await requirePatient();
+    const { user, patientProfile } = await requirePatient();
+    const requestMeta = getRequestMeta(req);
     await enforceMutationGuard(req, {
       key: "patient_treatment_approve",
       identity: patientProfile.id,
@@ -55,6 +57,20 @@ export async function POST(req: Request, { params }: Params) {
       select: {
         id: true,
         notes: true,
+      },
+    });
+
+    await logSecurityEvent({
+      userId: user.id,
+      userRole: user.role,
+      eventType: "DATA_CHANGE",
+      action: "PATIENT_TREATMENT_APPROVE",
+      resource: "TREATMENT",
+      resourceId: updated.id,
+      ipAddress: requestMeta.ipAddress,
+      userAgent: requestMeta.userAgent,
+      metadata: {
+        approved: parsed.approved,
       },
     });
 
