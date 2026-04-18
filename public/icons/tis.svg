@@ -1,0 +1,49 @@
+<svg width="900" height="300" viewBox="0 0 900 300">
+
+  <!-- ЖОҒАРҒЫ ТІСТЕР -->
+  <g id="upper">
+    <!-- Оң жақ -->
+    <rect class="tooth" id="18" x="50" y="50" width="40" height="40"/>
+    <rect class="tooth" id="17" x="95" y="50" width="40" height="40"/>
+    <rect class="tooth" id="16" x="140" y="50" width="40" height="40"/>
+    <rect class="tooth" id="15" x="185" y="50" width="40" height="40"/>
+    <rect class="tooth" id="14" x="230" y="50" width="40" height="40"/>
+    <rect class="tooth" id="13" x="275" y="50" width="40" height="40"/>
+    <rect class="tooth" id="12" x="320" y="50" width="40" height="40"/>
+    <rect class="tooth" id="11" x="365" y="50" width="40" height="40"/>
+
+    <!-- Сол жақ -->
+    <rect class="tooth" id="21" x="415" y="50" width="40" height="40"/>
+    <rect class="tooth" id="22" x="460" y="50" width="40" height="40"/>
+    <rect class="tooth" id="23" x="505" y="50" width="40" height="40"/>
+    <rect class="tooth" id="24" x="550" y="50" width="40" height="40"/>
+    <rect class="tooth" id="25" x="595" y="50" width="40" height="40"/>
+    <rect class="tooth" id="26" x="640" y="50" width="40" height="40"/>
+    <rect class="tooth" id="27" x="685" y="50" width="40" height="40"/>
+    <rect class="tooth" id="28" x="730" y="50" width="40" height="40"/>
+  </g>
+
+  <!-- ТӨМЕНГІ ТІСТЕР -->
+  <g id="lower">
+    <!-- Сол жақ -->
+    <rect class="tooth" id="38" x="50" y="150" width="40" height="40"/>
+    <rect class="tooth" id="37" x="95" y="150" width="40" height="40"/>
+    <rect class="tooth" id="36" x="140" y="150" width="40" height="40"/>
+    <rect class="tooth" id="35" x="185" y="150" width="40" height="40"/>
+    <rect class="tooth" id="34" x="230" y="150" width="40" height="40"/>
+    <rect class="tooth" id="33" x="275" y="150" width="40" height="40"/>
+    <rect class="tooth" id="32" x="320" y="150" width="40" height="40"/>
+    <rect class="tooth" id="31" x="365" y="150" width="40" height="40"/>
+
+    <!-- Оң жақ -->
+    <rect class="tooth" id="41" x="415" y="150" width="40" height="40"/>
+    <rect class="tooth" id="42" x="460" y="150" width="40" height="40"/>
+    <rect class="tooth" id="43" x="505" y="150" width="40" height="40"/>
+    <rect class="tooth" id="44" x="550" y="150" width="40" height="40"/>
+    <rect class="tooth" id="45" x="595" y="150" width="40" height="40"/>
+    <rect class="tooth" id="46" x="640" y="150" width="40" height="40"/>
+    <rect class="tooth" id="47" x="685" y="150" width="40" height="40"/>
+    <rect class="tooth" id="48" x="730" y="150" width="40" height="40"/>
+  </g>
+
+</svg>
