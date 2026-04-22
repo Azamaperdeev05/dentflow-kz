@@ -91,6 +91,19 @@ export const resetPasswordSchema = z
     }
   });
 
+export const twoFactorRecoveryRequestSchema = z.object({
+  email: z.string().email("Email форматы қате"),
+  password: z.string().min(1, "Құпия сөзді енгізіңіз"),
+});
+
+export const twoFactorRecoveryVerifySchema = z.object({
+  email: z.string().email("Email форматы қате"),
+  code: z.string().regex(/^\d{6}$/, "Код 6 цифр болуы керек"),
+});
+
+export type TwoFactorRecoveryRequestInput = z.infer<typeof twoFactorRecoveryRequestSchema>;
+export type TwoFactorRecoveryVerifyInput = z.infer<typeof twoFactorRecoveryVerifySchema>;
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type LoginEmailInput = z.infer<typeof loginEmailSchema>;

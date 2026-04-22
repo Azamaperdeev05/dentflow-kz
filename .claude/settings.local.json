@@ -12,7 +12,8 @@
       "Bash(npm run *)",
       "Bash(npx prisma *)",
       "Bash(mkdir -p \"/c/Users/Acer/Desktop/Dent/dentflow-kz/src/app/api/admin/doctors/[userId]/approve\")",
-      "Bash(mkdir -p \"/c/Users/Acer/Desktop/Dent/dentflow-kz/src/app/api/admin/doctors/[userId]/reject\")"
+      "Bash(mkdir -p \"/c/Users/Acer/Desktop/Dent/dentflow-kz/src/app/api/admin/doctors/[userId]/reject\")",
+      "Bash(node *)"
     ]
   }
 }

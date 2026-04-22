@@ -185,7 +185,12 @@ export default function LoginPage() {
 
               {requiresTwoFactor && (
                 <label className="mt-4 block">
-                  <span className="mb-1 block text-sm font-semibold text-slate-700">Google Authenticator коды</span>
+                  <div className="mb-1 flex items-center justify-between">
+                    <span className="text-sm font-semibold text-slate-700">Google Authenticator коды</span>
+                    <Link href="/forgot-2fa" className="text-xs font-medium text-cyan-600 hover:text-cyan-700">
+                      Кодты ұмыттыңыз ба?
+                    </Link>
+                  </div>
                   <input
                     type="text"
                     inputMode="numeric"

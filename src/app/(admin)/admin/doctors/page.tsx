@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/session";
-import { AdminNav } from "@/components/admin/admin-nav";
 import { DoctorApprovalActions } from "@/components/admin/doctor-approval-actions";
 import { getDoctorApprovalStatusLabel } from "@/lib/kz-labels";
 
@@ -70,14 +69,11 @@ export default async function AdminDoctorsPage({
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row">
-      <AdminNav />
-
-      <section className="min-w-0 flex-1 space-y-6">
-        <header>
-          <h1 className="text-4xl font-bold text-slate-900">Дәрігерлер</h1>
-          <p className="mt-1 text-slate-500">Тіркелу өтінімдерін басқару</p>
-        </header>
+    <main className="space-y-6 py-4">
+      <header>
+        <h1 className="text-4xl font-bold text-slate-900">Дәрігерлер</h1>
+        <p className="mt-1 text-slate-500">Тіркелу өтінімдерін басқару</p>
+      </header>
 
         <nav className="flex flex-wrap gap-2">
           {tabs.map((tab) => (
@@ -165,8 +161,7 @@ export default async function AdminDoctorsPage({
               </table>
             </div>
           )}
-        </div>
-      </section>
+      </div>
     </main>
   );
 }

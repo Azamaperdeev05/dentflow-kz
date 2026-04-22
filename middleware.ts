@@ -7,6 +7,7 @@ const publicRoutes = [
   "/register",
   "/forgot-password",
   "/reset-password",
+  "/forgot-2fa",
 ];
 
 export default auth((req) => {

@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/session";
-import { AdminNav } from "@/components/admin/admin-nav";
 import { DoctorApprovalActions } from "@/components/admin/doctor-approval-actions";
 import { startOfMonth } from "date-fns";
 
@@ -46,14 +45,11 @@ export default async function AdminDashboardPage() {
   const monthRevenueAmount = monthRevenue._sum.amount ?? 0;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row">
-      <AdminNav />
-
-      <section className="min-w-0 flex-1 space-y-6">
-        <header>
-          <h1 className="text-4xl font-bold text-slate-900">Дашборд</h1>
-          <p className="mt-1 text-slate-500">Жүйе жай-күйінің шолуы</p>
-        </header>
+    <main className="space-y-6 py-4">
+      <header>
+        <h1 className="text-4xl font-bold text-slate-900">Дашборд</h1>
+        <p className="mt-1 text-slate-500">Жүйе жай-күйінің шолуы</p>
+      </header>
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 p-6 ring-1 ring-blue-200 shadow-sm transition hover:shadow-md">
@@ -159,7 +155,6 @@ export default async function AdminDashboardPage() {
               Барлық дәрігерлер →
             </Link>
           </div>
-        </section>
       </section>
     </main>
   );
