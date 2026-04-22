@@ -1,14 +1,8 @@
 import { getRequestMeta, logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { requirePatient } from "@/lib/session";
-import { MedicalFileType, validateFile, validateFileSignature } from "@/lib/file-upload";
+import { validateFile } from "@/lib/file-upload";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
-
-const MEDICAL_FILE_TYPES: MedicalFileType[] = ["PHOTO", "XRAY", "DOCUMENT"];
-
-function isMedicalFileType(value: string): value is MedicalFileType {
-  return MEDICAL_FILE_TYPES.includes(value as MedicalFileType);
-}
 
 export async function POST(req: Request) {
   try {
@@ -24,28 +18,21 @@ export async function POST(req: Request) {
     const formData = await req.formData();
 
     const file = formData.get("file") as File | null;
-    const fileTypeRaw = formData.get("fileType");
-    const fileType = typeof fileTypeRaw === "string" && isMedicalFileType(fileTypeRaw) ? fileTypeRaw : null;
 
-    if (!file || !fileType) {
-      return Response.json({ error: "Файл және түрі міндетті" }, { status: 400 });
+    if (!file) {
+      return Response.json({ error: "Файл міндетті" }, { status: 400 });
     }
 
-    const validation = validateFile(file, fileType);
+    const validation = validateFile(file);
     if (!validation.valid) {
       return Response.json({ error: validation.error ?? "Файл валидациядан өтпеді" }, { status: 400 });
     }
 
-    // For development: use data URL (not recommended for production)
     const buffer = await file.arrayBuffer();
-    const signatureBytes = new Uint8Array(buffer.slice(0, 512));
-    const signatureCheck = validateFileSignature(file, fileType, signatureBytes);
-    if (!signatureCheck.valid) {
-      return Response.json({ error: signatureCheck.error ?? "Файл сигнатурасы жарамсыз" }, { status: 400 });
-    }
 
     const base64 = Buffer.from(buffer).toString("base64");
-    const dataUrl = `data:${file.type};base64,${base64}`;
+    const mimeType = file.type || "application/octet-stream";
+    const dataUrl = `data:${mimeType};base64,${base64}`;
 
     // Save file record to database
     const medicalFile = await prisma.medicalFile.create({
@@ -53,7 +40,7 @@ export async function POST(req: Request) {
         patientId: patientProfile.id,
         name: file.name,
         url: dataUrl,
-        type: fileType,
+        type: mimeType,
         size: file.size,
       },
     });
@@ -68,7 +55,7 @@ export async function POST(req: Request) {
       ipAddress: requestMeta.ipAddress,
       userAgent: requestMeta.userAgent,
       metadata: {
-        fileType,
+        fileType: medicalFile.type,
         size: file.size,
       },
     });

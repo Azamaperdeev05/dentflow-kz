@@ -3,6 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/db";
 import { requireDoctorPage } from "@/lib/session";
 import { DoctorNav } from "@/components/doctor/doctor-nav";
+import { decryptSecret } from "@/lib/secret-crypto";
 
 export default async function DoctorMessagesPage() {
   const { user } = await requireDoctorPage();
@@ -36,6 +37,18 @@ export default async function DoctorMessagesPage() {
       return true;
     });
 
+  // Calculate unread status for each conversation
+  const conversationsWithStatus = await Promise.all(conversations.map(async (conv) => {
+    const unreadCount = await prisma.message.count({
+      where: {
+        senderId: conv.otherUser.id,
+        receiverId: user.id,
+        isRead: false
+      }
+    });
+    return { ...conv, isUnread: unreadCount > 0 };
+  }));
+
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row">
       <DoctorNav />
@@ -55,15 +68,30 @@ export default async function DoctorMessagesPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {conversations.map((conv) => (
-                <article key={conv.otherUser.id} className="flex items-center justify-between rounded-xl border border-slate-200 p-5 hover:shadow-md transition bg-gradient-to-br from-slate-50 to-white">
+              {conversationsWithStatus.map((conv) => (
+                <article key={conv.otherUser.id} className={`flex items-center justify-between rounded-xl border p-5 hover:shadow-md transition ${
+                  conv.isUnread ? "border-cyan-200 bg-cyan-50/30 ring-1 ring-cyan-100" : "border-slate-200 bg-gradient-to-br from-slate-50 to-white"
+                }`}>
                   <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-semibold flex-shrink-0">
-                      {conv.otherUser.name?.charAt(0).toUpperCase()}
+                    <div className="relative">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-cyan-500 to-blue-500 text-white font-semibold flex-shrink-0">
+                        {conv.otherUser.name?.charAt(0).toUpperCase()}
+                      </div>
+                      {conv.isUnread && (
+                        <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-red-500 ring-2 ring-white"></span>
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="font-bold text-slate-900">{conv.otherUser.name}</h2>
-                      <p className="mt-1 text-sm text-slate-600 line-clamp-1">&quot;{conv.lastMessage.content.substring(0, 60)}{conv.lastMessage.content.length > 60 ? "..." : ""}</p>
+                      <div className="flex items-center gap-2">
+                        <h2 className={`font-bold text-slate-900 ${conv.isUnread ? "text-cyan-900" : ""}`}>{conv.otherUser.name}</h2>
+                        {conv.isUnread && <span className="rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-600 uppercase tracking-tighter">Жаңа</span>}
+                      </div>
+                      <p className={`mt-1 text-sm line-clamp-1 ${conv.isUnread ? "font-bold text-slate-900" : "text-slate-600"}`}>
+                        &quot;{conv.lastMessage.isEncrypted 
+                          ? (decryptSecret(conv.lastMessage.content) || (conv.lastMessage.fileName ? `📎 ${conv.lastMessage.fileName}` : "[Шифрланған]"))
+                          : (conv.lastMessage.content || (conv.lastMessage.fileName ? `📎 ${conv.lastMessage.fileName}` : ""))}
+                        {conv.lastMessage.content?.length > 60 ? "..." : ""}
+                      </p>
                       <p className="mt-1 text-xs text-slate-500">{new Date(conv.lastMessage.createdAt).toLocaleString("kk-KZ")}</p>
                     </div>
                   </div>

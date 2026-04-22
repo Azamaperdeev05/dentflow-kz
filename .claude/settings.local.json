@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx claude-mem:*)",
+      "Bash(curl -sL \"https://raw.githubusercontent.com/affaan-m/everything-claude-code/main/README.md\")",
+      "Bash(curl -L https://api.github.com/repos/affaan-m/everything-claude-code/readme -H 'Accept: application/vnd.github.raw')",
+      "Bash(gh api:*)",
+      "Bash(npx next:*)",
+      "Bash(grep -E \"\\\\.ts$\")"
+    ]
+  }
+}

@@ -13,6 +13,7 @@ type Props = {
   markers?: Record<string, DayMarker>;
   selectedDate?: string;
   onSelectDate?: (dateKey: string) => void;
+  disablePastDates?: boolean;
 };
 
 const weekDays = ["Дс", "Сс", "Ср", "Бс", "Жм", "Сн", "Жс"];
@@ -24,10 +25,12 @@ function formatDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function MonthCalendar({ year, month, monthLabel, markers = {}, selectedDate, onSelectDate }: Props) {
+export function MonthCalendar({ year, month, monthLabel, markers = {}, selectedDate, onSelectDate, disablePastDates = false }: Props) {
   const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const monthName = monthLabel ?? firstDay.toLocaleDateString("kk-KZ", { month: "long", year: "numeric" });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   // Monday-based index: 0..6
   const startOffset = (firstDay.getDay() + 6) % 7;
@@ -65,20 +68,25 @@ export function MonthCalendar({ year, month, monthLabel, markers = {}, selectedD
           const marker = markers[cell.key];
           const isSelected = selectedDate === cell.key;
           const isUnavailableDay = marker?.isUnavailableDay ?? false;
+          const cellDate = new Date(year, month, cell.day);
+          const isPastDate = disablePastDates && cellDate.getTime() < today.getTime();
+          const isDisabled = !onSelectDate || isUnavailableDay || isPastDate;
 
           return (
             <button
               key={cell.key}
               type="button"
               onClick={() => onSelectDate?.(cell.key)}
-              disabled={!onSelectDate || isUnavailableDay}
+              disabled={isDisabled}
               className={`relative h-12 rounded-lg border text-sm font-medium transition ${
-                isUnavailableDay
+                isDisabled && !isUnavailableDay
+                  ? "border-slate-200 bg-slate-100 text-slate-400"
+                  : isUnavailableDay
                   ? "border-red-200 bg-red-50 text-red-600"
                   : isSelected
                   ? "border-cyan-500 bg-cyan-50 text-cyan-700"
                   : "border-slate-200 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50/40"
-              } ${!onSelectDate || isUnavailableDay ? "cursor-not-allowed" : ""}`}
+              } ${isDisabled ? "cursor-not-allowed" : ""}`}
             >
               {cell.day}
 

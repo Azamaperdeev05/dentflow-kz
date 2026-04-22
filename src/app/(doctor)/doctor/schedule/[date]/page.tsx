@@ -32,6 +32,9 @@ export default async function DoctorDaySchedulePage({ params }: Props) {
 
   const dayStart = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
   const dayEnd = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate() + 1);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const isPastDay = dayStart.getTime() < todayStart.getTime();
 
   const [appointments, patients] = await Promise.all([
     prisma.appointment.findMany({
@@ -77,7 +80,7 @@ export default async function DoctorDaySchedulePage({ params }: Props) {
     }
 
     const now = new Date();
-    if (getDayKey(dateTime) === getDayKey(now) && dateTime < now) {
+    if (dateTime < now) {
       return false;
     }
 
@@ -150,13 +153,19 @@ export default async function DoctorDaySchedulePage({ params }: Props) {
         </section>
 
         <section className="rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm">
+          {isPastDay && (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+              Өткен күнге жаңа қабылдау тіркеуге болмайды.
+            </div>
+          )}
+
           {!workingDay && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
               Бұл күн сіздің жұмыс күніңіз емес. Жаңа қабылдау тіркеу өшірілген.
             </div>
           )}
 
-          {workingDay && patients.length > 0 && availableSlots.length > 0 && (
+          {!isPastDay && workingDay && patients.length > 0 && availableSlots.length > 0 && (
             <DayAppointmentForm
               dateKey={params.date}
               patients={patients.map((item) => ({
@@ -169,7 +178,7 @@ export default async function DoctorDaySchedulePage({ params }: Props) {
             />
           )}
 
-          {workingDay && availableSlots.length === 0 && (
+          {!isPastDay && workingDay && availableSlots.length === 0 && (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
               Бұл күнге бос слот қалмады.
             </div>

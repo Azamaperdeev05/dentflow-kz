@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { requireDoctor } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
 import { z } from "zod";
+import { canDoctorAccessPatient } from "@/lib/rbac";
 
 const schema = z.object({
   treatmentId: z.string().min(1),
@@ -25,10 +26,14 @@ export async function POST(req: Request) {
 
     const treatment = await prisma.treatment.findUnique({
       where: { id: parsed.treatmentId },
-      include: { appointment: true },
     });
 
-    if (!treatment || !treatment.appointment || treatment.appointment.doctorId !== doctorProfile.id) {
+    if (!treatment) {
+      return Response.json({ error: "Емдеу табылмады" }, { status: 404 });
+    }
+
+    const allowed = await canDoctorAccessPatient(doctorProfile.id, treatment.patientId);
+    if (!allowed) {
       return Response.json({ error: "Емдеу табылмады" }, { status: 404 });
     }
 

@@ -116,6 +116,7 @@ model PatientProfile {
   userId       String        @unique
   birthDate    DateTime?
   gender       String?
+  region       String?
   address      String?
   bloodType    String?
   allergies    String?
@@ -215,15 +216,18 @@ model Payment {
 }
 
 model Message {
-  id         String   @id @default(cuid())
-  senderId   String
-  receiverId String
-  content    String
-  isRead     Boolean  @default(false)
-  fileUrl    String?
-  createdAt  DateTime @default(now())
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  id          String   @id @default(cuid())
+  senderId    String
+  receiverId  String
+  content     String
+  isRead      Boolean  @default(false)
+  fileUrl     String?
+  fileName    String?
+  fileType    String?
+  isEncrypted Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
 
   @@index([receiverId])
   @@index([senderId])

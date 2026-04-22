@@ -6,6 +6,7 @@ import { DoctorNav } from "@/components/doctor/doctor-nav";
 import { CreateTreatmentForm } from "@/components/doctor/create-treatment-form";
 import { getTreatmentStatusLabel } from "@/lib/kz-labels";
 import { parseTreatmentMeta, parseTreatmentStages } from "@/lib/treatment-plan";
+import { FilePreviewButton } from "@/components/patient/file-preview-button";
 
 type Props = {
   params: {
@@ -36,17 +37,24 @@ export default async function TreatmentPlanPage({ params }: Props) {
     orderBy: { startDate: "desc" },
   });
 
-  return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 px-6 py-10">
-      <header className="space-y-3">
-        <h1 className="text-3xl font-semibold text-slate-900">Емдеу жоспары: {patient.user.name}</h1>
-        <DoctorNav />
-      </header>
+  const medicalFiles = await prisma.medicalFile.findMany({
+    where: { patientId: patient.id },
+    orderBy: { uploadedAt: "desc" },
+  });
 
-      <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200 text-sm text-slate-700">
+  return (
+    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-6 py-10 lg:flex-row">
+      <DoctorNav />
+
+      <section className="min-w-0 flex-1 space-y-6">
+        <header>
+          <h1 className="text-3xl font-semibold text-slate-900">Емдеу жоспары: {patient.user.name}</h1>
+        </header>
+
+      <div className="rounded-xl bg-white p-5 ring-1 ring-slate-200 text-sm text-slate-700">
         <p>Телефон: {patient.user.phone || "-"}</p>
         <p>Email: {patient.user.email}</p>
-      </section>
+      </div>
 
       <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
         <h2 className="text-lg font-semibold text-slate-900">Тіс түрлері</h2>
@@ -74,6 +82,57 @@ export default async function TreatmentPlanPage({ params }: Props) {
       </section>
 
       <CreateTreatmentForm patientProfileId={patient.id} />
+
+      <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
+        <h2 className="text-lg font-semibold text-slate-900">Медициналық файлдар</h2>
+        <p className="mt-1 text-sm text-slate-600">Пациент жүктеген барлық файлдар осы жерде көрінеді.</p>
+
+        {medicalFiles.length === 0 ? (
+          <p className="mt-3 text-sm text-slate-500">Файлдар жоқ.</p>
+        ) : (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[720px] border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-700 font-semibold">
+                  <th className="py-3 px-4">Атауы</th>
+                  <th className="py-3 px-4">Түрі</th>
+                  <th className="py-3 px-4">Өлшемі</th>
+                  <th className="py-3 px-4">Жүктелген күні</th>
+                  <th className="py-3 px-4">Әрекет</th>
+                </tr>
+              </thead>
+              <tbody>
+                {medicalFiles.map((file, index) => (
+                  <tr key={file.id} className={`border-b border-slate-100 ${index % 2 === 0 ? "bg-white" : "bg-slate-50"}`}>
+                    <td className="py-3 px-4 font-medium text-slate-900">{file.name}</td>
+                    <td className="py-3 px-4 text-slate-700">{file.type}</td>
+                    <td className="py-3 px-4 text-slate-700">{Math.round(file.size / 1024)} KB</td>
+                    <td className="py-3 px-4 text-slate-700">{new Date(file.uploadedAt).toLocaleString("kk-KZ")}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        <FilePreviewButton 
+                          url={file.url} 
+                          name={file.name} 
+                          type={file.type} 
+                          label="Көру"
+                          className="inline-flex items-center gap-1 rounded-lg bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-cyan-700 transition"
+                        />
+                        <a
+                          href={file.url}
+                          download={file.name}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Жүктеу
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">
         <h2 className="text-lg font-semibold text-slate-900">Емдеу тарихы</h2>
@@ -116,6 +175,7 @@ export default async function TreatmentPlanPage({ params }: Props) {
             ))}
           </div>
         )}
+      </section>
       </section>
     </main>
   );

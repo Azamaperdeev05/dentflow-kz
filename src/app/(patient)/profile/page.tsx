@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { requirePatientPage } from "@/lib/session";
 import { TwoFactorSettings } from "@/components/shared/two-factor-settings";
+import { parseStringArray } from "@/lib/patient-profile-options";
 
 export const metadata = {
   title: "Профиль - DentFlow KZ",
@@ -14,8 +15,21 @@ function formatDate(value?: Date | null) {
   return new Date(value).toLocaleDateString("kk-KZ");
 }
 
+function formatGender(value?: string | null) {
+  if (value === "MALE") {
+    return "Ұл";
+  }
+
+  if (value === "FEMALE") {
+    return "Қыз";
+  }
+
+  return "—";
+}
+
 export default async function PatientProfilePage() {
   const { user, patientProfile } = await requirePatientPage();
+  const allergies = parseStringArray(patientProfile?.allergies);
 
   return (
     <div className="space-y-6">
@@ -50,12 +64,16 @@ export default async function PatientProfilePage() {
         <h2 className="text-xl font-bold text-slate-900">Медициналық профиль</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div>
+            <p className="text-sm font-semibold text-slate-500">Облыс</p>
+            <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">{patientProfile?.region || "—"}</p>
+          </div>
+          <div>
             <p className="text-sm font-semibold text-slate-500">Туған күні</p>
             <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">{formatDate(patientProfile?.birthDate)}</p>
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-500">Жынысы</p>
-            <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">{patientProfile?.gender || "—"}</p>
+            <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">{formatGender(patientProfile?.gender)}</p>
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-500">Қан тобы</p>
@@ -63,7 +81,19 @@ export default async function PatientProfilePage() {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-500">Аллергия</p>
-            <p className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">{patientProfile?.allergies || "—"}</p>
+            <div className="mt-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800">
+              {allergies.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {allergies.map((allergy) => (
+                    <span key={allergy} className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-700 ring-1 ring-slate-200">
+                      {allergy}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                "—"
+              )}
+            </div>
           </div>
         </div>
       </section>

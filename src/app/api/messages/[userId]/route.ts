@@ -5,9 +5,16 @@ import { requireSessionUser } from "@/lib/session";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
 import { z } from "zod";
 import { notifyUserChannels } from "@/lib/notification-dispatch";
+import { encryptSecret, decryptSecret } from "@/lib/secret-crypto";
+import { debugLog } from "@/lib/debug-logger";
 
 const sendSchema = z.object({
-  content: z.string().min(1).max(2000),
+  content: z.string().max(2000).optional(),
+  fileUrl: z.string().optional(),
+  fileName: z.string().optional(),
+  fileType: z.string().optional(),
+}).refine(data => data.content || data.fileUrl, {
+  message: "Хат мәтіні немесе файл болуы керек",
 });
 
 type Params = {
@@ -36,7 +43,7 @@ export async function GET(_: Request, { params }: Params) {
       return Response.json({ error: "Рұқсат жоқ" }, { status: 403 });
     }
 
-    const messages = await prisma.message.findMany({
+    const rawMessages = await prisma.message.findMany({
       where: {
         OR: [
           {
@@ -55,6 +62,12 @@ export async function GET(_: Request, { params }: Params) {
         receiver: { select: { id: true, name: true } },
       },
     });
+
+    const messages = rawMessages.map(msg => ({
+      ...msg,
+      content: msg.isEncrypted ? (decryptSecret(msg.content) || "[Шифрланған хабарлама]") : msg.content,
+      fileUrl: msg.isEncrypted && msg.fileUrl ? (decryptSecret(msg.fileUrl) || msg.fileUrl) : msg.fileUrl,
+    }));
 
     await prisma.message.updateMany({
       where: {
@@ -79,10 +92,7 @@ export async function GET(_: Request, { params }: Params) {
 
     return Response.json({ messages });
   } catch (error) {
-    if (error instanceof Error && (error.message === "UNAUTHORIZED" || error.message === "FORBIDDEN")) {
-      return Response.json({ error: "Рұқсат жоқ" }, { status: 403 });
-    }
-
+    debugLog("GET messages failed", error);
     return Response.json({ error: "Сервер қатесі" }, { status: 500 });
   }
 }
@@ -112,19 +122,52 @@ export async function POST(req: Request, { params }: Params) {
       return Response.json({ error: "Рұқсат жоқ" }, { status: 403 });
     }
 
-    const body = await req.json();
-    const parsed = sendSchema.parse(body);
+    const contentType = req.headers.get("content-type") || "";
+    let content = "";
+    let fileUrl: string | undefined = undefined;
+    let fileName: string | undefined = undefined;
+    let fileType: string | undefined = undefined;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      content = formData.get("content")?.toString() || "";
+      const file = formData.get("file") as File | null;
+      if (file) {
+         const buffer = await file.arrayBuffer();
+         const base64 = Buffer.from(buffer).toString("base64");
+         fileType = file.type || "application/octet-stream";
+         fileName = file.name;
+         fileUrl = `data:${fileType};base64,${base64}`;
+      }
+      if (!content && !fileUrl) {
+        return Response.json({ error: "Хат мәтіні немесе файл болуы керек" }, { status: 400 });
+      }
+    } else {
+      const body = await req.json();
+      const parsed = sendSchema.parse(body);
+      content = parsed.content || "";
+      fileUrl = parsed.fileUrl;
+      fileName = parsed.fileName;
+      fileType = parsed.fileType;
+    }
 
     const receiver = await prisma.user.findUnique({ where: { id: params.userId }, select: { id: true, role: true } });
     if (!receiver) {
       return Response.json({ error: "Қолданушы табылмады" }, { status: 404 });
     }
 
+    const encryptedContent = content ? encryptSecret(content) : "";
+    const encryptedFileUrl = fileUrl ? encryptSecret(fileUrl) : undefined;
+
     const message = await prisma.message.create({
       data: {
         senderId: user.id,
         receiverId: params.userId,
-        content: parsed.content,
+        content: encryptedContent,
+        isEncrypted: true,
+        fileUrl: encryptedFileUrl,
+        fileName: fileName,
+        fileType: fileType,
       },
       include: {
         sender: { select: { id: true, name: true } },
@@ -132,10 +175,18 @@ export async function POST(req: Request, { params }: Params) {
       },
     });
 
+    const displayContent = content || (fileName ? `Файл: ${fileName}` : "Файл жіберілді");
+    
+    // Set unencrypted values for the immediate response object (don't save to DB)
+    message.content = content || ""; 
+    if (message.fileUrl) {
+       message.fileUrl = fileUrl || null;
+    }
+
     await notifyUserChannels({
       userId: params.userId,
       title: "Жаңа чат хабарламасы",
-      body: `${user.name}: ${parsed.content.slice(0, 80)}`,
+      body: `${user.name}: ${displayContent.slice(0, 80)}`,
       type: "MESSAGE",
       link: receiver.role === "DOCTOR" ? `/doctor/chat/${user.id}` : `/patient/chat/${user.id}`,
     });
@@ -149,11 +200,12 @@ export async function POST(req: Request, { params }: Params) {
       resourceId: params.userId,
       ipAddress: requestMeta.ipAddress,
       userAgent: requestMeta.userAgent,
-      metadata: { length: parsed.content.length },
+      metadata: { length: content?.length || 0, hasFile: !!fileUrl },
     });
 
     return Response.json({ success: true, message });
   } catch (error) {
+    debugLog("POST message failed", error);
     if (error instanceof Error && error.message === "RATE_LIMIT_EXCEEDED") {
       return Response.json({ error: "Тым көп хабарлама жіберілді. Кейінірек қайталап көріңіз" }, { status: 429 });
     }

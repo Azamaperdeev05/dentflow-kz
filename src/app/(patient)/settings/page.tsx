@@ -1,58 +1,21 @@
 import { requirePatientPage } from "@/lib/session";
-import { prisma } from "@/lib/db";
+import { PatientProfileForm } from "@/components/patient/patient-profile-form";
 
 export const metadata = {
   title: "Баптау - DentFlow KZ",
 };
 
 export default async function SettingsPage() {
-  const { user, patientProfile } = await requirePatientPage();
+  const { patientProfile } = await requirePatientPage();
 
   return (
     <div className="space-y-8">
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Баптау</h1>
-        <p className="mt-1 text-sm text-slate-600">Сіздің профиліңіздің параметрлерін басқарыңыз</p>
+        <p className="mt-1 text-sm text-slate-600">Медициналық профиль, мекенжай және қосымша ақпарат осы жерде сақталады.</p>
       </div>
 
-      {/* Профил ақпараты */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-6 text-lg font-semibold text-slate-900">Профил ақпараты</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Аты-жөні</label>
-            <div className="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900">
-              {user.name || "—"}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700">Электрондық пошта</label>
-            <div className="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900">
-              {user.email || "—"}
-            </div>
-          </div>
-
-          {patientProfile?.birthDate && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Туған күні</label>
-              <div className="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900">
-                {new Date(patientProfile.birthDate).toLocaleDateString("kk-KZ")}
-              </div>
-            </div>
-          )}
-
-          {patientProfile?.address && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700">Мекенжайы</label>
-              <div className="mt-1 rounded-lg border border-slate-300 bg-slate-50 px-4 py-2 text-sm text-slate-900">
-                {patientProfile.address}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      <PatientProfileForm patientProfile={patientProfile} />
 
       {/* Уведомление параметрлері */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">

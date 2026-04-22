@@ -1,12 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import { FilePreviewButton } from "@/components/patient/file-preview-button";
 
 type ChatMessage = {
   id: string;
   senderId: string;
   receiverId: string;
   content: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileType?: string | null;
+  isEncrypted: boolean;
   createdAt: string;
 };
 
@@ -31,7 +37,9 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadMessages = useCallback(async () => {
     const res = await fetch(`/api/messages/${otherUserId}`, { cache: "no-store" });
@@ -61,17 +69,47 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        setError("Файл өлшемі 10MB-дан аспауы керек");
+        return;
+      }
+      setSelectedFile(file);
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   async function send() {
-    if (!text.trim()) {
+    if (!text.trim() && !selectedFile) {
       return;
     }
 
     setLoading(true);
     setError(null);
+
+    let bodyContent: FormData | string;
+    let headers: HeadersInit = {};
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("content", text);
+      formData.append("file", selectedFile);
+      bodyContent = formData;
+    } else {
+      headers = { "Content-Type": "application/json" };
+      bodyContent = JSON.stringify({ content: text });
+    }
+
     const res = await fetch(`/api/messages/${otherUserId}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: text }),
+      headers,
+      body: bodyContent,
     });
 
     const data = (await res.json()) as { error?: string };
@@ -82,6 +120,8 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
     }
 
     setText("");
+    setSelectedFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setLoading(false);
     await loadMessages();
   }
@@ -94,7 +134,15 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
             {getInitials(title)}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="truncate text-lg font-semibold text-slate-900">{title}</h2>
+              <div className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 border border-emerald-100">
+                <svg className="h-2.5 w-2.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+                ШИФРЛАНҒАН
+              </div>
+            </div>
             <p className="truncate text-sm text-slate-500">{subtitle}</p>
           </div>
         </div>
@@ -134,8 +182,41 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
                             : "rounded-bl-md border border-slate-200 bg-white text-slate-800"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap leading-6">{msg.content}</p>
-                        <p className={`mt-1 text-[11px] ${own ? "text-slate-500" : "text-slate-400"}`}>{time}</p>
+                        {msg.fileUrl && (
+                          <div className="mb-3 space-y-2">
+                            {msg.fileType?.startsWith("image/") ? (
+                              <div className="relative aspect-auto max-h-60 overflow-hidden rounded-xl border border-slate-200/50">
+                                <img src={msg.fileUrl} alt={msg.fileName || ""} className="max-h-full max-w-full object-contain" />
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3 rounded-xl border border-slate-200/50 bg-white/50 p-3">
+                                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-xl">
+                                  📎
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-medium text-slate-900">{msg.fileName}</p>
+                                  <p className="text-[10px] text-slate-500 uppercase tracking-tighter">{msg.fileType?.split("/")[1] || "файл"}</p>
+                                </div>
+                              </div>
+                            )}
+                            <FilePreviewButton 
+                              url={msg.fileUrl} 
+                              name={msg.fileName || "файл"} 
+                              type={msg.fileType || "application/octet-stream"} 
+                              label="Көру / Жүктеу"
+                              className="w-full flex items-center justify-center gap-2 rounded-xl bg-white/60 py-2 text-xs font-bold text-slate-700 hover:bg-white transition ring-1 ring-slate-200/50"
+                            />
+                          </div>
+                        )}
+                        {msg.content && <p className="whitespace-pre-wrap leading-6">{msg.content}</p>}
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                           <p className={`text-[11px] ${own ? "text-slate-500" : "text-slate-400"}`}>{time}</p>
+                           {msg.isEncrypted && (
+                             <svg className={`h-3 w-3 ${own ? "text-cyan-600" : "text-slate-400"}`} fill="currentColor" viewBox="0 0 20 20">
+                               <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                             </svg>
+                           )}
+                        </div>
                       </div>
                     </div>
                   );
@@ -148,7 +229,39 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
           {error && <p className="border-t border-slate-200 px-4 py-2 text-sm font-medium text-red-600">{error}</p>}
 
           <div className="border-t border-slate-200 bg-white px-3 py-3">
-            <div className="flex items-end gap-2 rounded-[22px] border border-slate-300 bg-slate-50 px-3 py-2 shadow-inner focus-within:border-cyan-400 focus-within:bg-white">
+            {selectedFile && (
+              <div className="mb-2 flex items-center justify-between rounded-xl bg-cyan-50 px-4 py-2 ring-1 ring-cyan-100">
+                <div className="flex items-center gap-3">
+                   <span className="text-xl">📎</span>
+                   <div className="min-w-0">
+                     <p className="truncate text-sm font-bold text-cyan-900">{selectedFile.name}</p>
+                     <p className="text-[10px] text-cyan-600">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                   </div>
+                </div>
+                <button onClick={removeFile} className="rounded-full p-1 text-cyan-400 hover:bg-cyan-100 hover:text-cyan-600 transition">
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            )}
+            <div className="flex items-end gap-2 rounded-[22px] border border-slate-300 bg-slate-50 px-3 py-2 shadow-inner focus-within:border-cyan-400 focus-within:bg-white transition-all duration-200">
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={loading}
+                className="flex h-11 w-11 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition flex-shrink-0"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
               <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -166,10 +279,10 @@ export function ChatBox({ otherUserId, currentUserId, title = "Чат", subtitle
               <button
                 type="button"
                 onClick={send}
-                disabled={loading}
+                disabled={loading || (!text.trim() && !selectedFile)}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-5 text-sm font-semibold text-white shadow-sm transition hover:from-cyan-600 hover:to-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {loading ? "Жіберілуде..." : "Жіберу"}
+                {loading ? "..." : "Жіберу"}
               </button>
             </div>
           </div>

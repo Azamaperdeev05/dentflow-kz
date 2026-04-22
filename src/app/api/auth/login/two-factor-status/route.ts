@@ -1,10 +1,9 @@
-import { compare } from "bcryptjs";
 import { logSecurityEvent } from "@/lib/audit-log";
 import { prisma } from "@/lib/db";
 import { enforceMutationGuard } from "@/lib/mutation-guard";
 import { deriveDeviceFingerprint, updateLoginRiskSignal } from "@/lib/security-risk";
 import { sanitizeEmail } from "@/lib/sanitize";
-import { loginSchema } from "@/lib/validations";
+import { loginEmailSchema } from "@/lib/validations";
 
 function requestMeta(req: Request) {
   const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? req.headers.get("x-real-ip") ?? "unknown";
@@ -27,7 +26,7 @@ export async function POST(req: Request) {
     });
 
     const body = await req.json();
-    const parsed = loginSchema.parse(body);
+    const parsed = loginEmailSchema.parse(body);
     const email = sanitizeEmail(parsed.email);
 
     const user = await prisma.user.findUnique({
@@ -35,7 +34,6 @@ export async function POST(req: Request) {
       select: {
         id: true,
         role: true,
-        password: true,
         isVerified: true,
         twoFactorEnabled: true,
       },
@@ -60,33 +58,6 @@ export async function POST(req: Request) {
         userAgent: meta.userAgent,
         deviceFingerprint: meta.deviceFingerprint,
         metadata: { reason: "USER_NOT_FOUND", email },
-      });
-      return Response.json({ error: "Email немесе құпиясөз қате" }, { status: 401 });
-    }
-
-    const isValidPassword = await compare(parsed.password, user.password);
-    if (!isValidPassword) {
-      const risk = await updateLoginRiskSignal({
-        userId: user.id,
-        email,
-        ipAddress: meta.ipAddress,
-        userAgent: meta.userAgent,
-        isSuccess: false,
-      });
-
-      await logSecurityEvent({
-        userId: user.id,
-        userRole: user.role,
-        eventType: "AUTH",
-        action: "LOGIN_PRECHECK_FAILED",
-        resource: "SESSION",
-        status: "FAILED",
-        riskScore: risk.riskScore,
-        isSuspicious: risk.isSuspicious,
-        ipAddress: meta.ipAddress,
-        userAgent: meta.userAgent,
-        deviceFingerprint: meta.deviceFingerprint,
-        metadata: { reason: "INVALID_PASSWORD", failedAttempts: risk.failedAttempts },
       });
       return Response.json({ error: "Email немесе құпиясөз қате" }, { status: 401 });
     }

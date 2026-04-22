@@ -25,6 +25,7 @@ export function DoctorScheduleCalendar({ year, month, monthLabel, markers }: Pro
       month={month}
       monthLabel={monthLabel}
       markers={markers}
+      disablePastDates
       onSelectDate={(dateKey) => {
         router.push(`/doctor/schedule/${dateKey}`);
       }}

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requirePatientPage } from "@/lib/session";
+import { buildTimeSlots, combineDateAndTime, getDayKey, getMaxAppointmentTypeDurationMinutes, isWorkingDay } from "@/lib/scheduling";
 
 type Props = {
   searchParams: {
     q?: string;
     specialization?: string;
     available?: string;
+    sort?: string;
   };
 };
 
@@ -16,6 +18,7 @@ export default async function DoctorsPage({ searchParams }: Props) {
   const q = searchParams.q?.trim() ?? "";
   const specialization = searchParams.specialization?.trim() ?? "";
   const availableOnly = searchParams.available === "1";
+  const sort = searchParams.sort?.trim() ?? "RATING";
 
   const doctors = await prisma.doctorProfile.findMany({
     where: {
@@ -33,8 +36,64 @@ export default async function DoctorsPage({ searchParams }: Props) {
     include: {
       user: { select: { id: true, name: true } },
     },
-    orderBy: [{ rating: "desc" }, { reviewCount: "desc" }],
     take: 50,
+  });
+
+  const today = new Date();
+  const todayKey = getDayKey(today);
+  const dayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const dayEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+  const todayAppointments = await prisma.appointment.findMany({
+    where: {
+      doctorId: { in: doctors.map((doctor) => doctor.id) },
+      status: { in: ["PENDING", "CONFIRMED"] },
+      dateTime: { gte: dayStart, lt: dayEnd },
+    },
+    select: {
+      doctorId: true,
+      dateTime: true,
+      duration: true,
+    },
+  });
+
+  const doctorsWithStats = doctors.map((doctor) => {
+    const appointments = todayAppointments.filter((item) => item.doctorId === doctor.id);
+    const canWorkToday = doctor.isAvailable && isWorkingDay(doctor.workDays, today);
+
+    const availableSlotsToday = canWorkToday
+      ? buildTimeSlots(doctor.workHoursStart, doctor.workHoursEnd, doctor.slotDuration).filter((time) => {
+          const dateTime = combineDateAndTime(todayKey, time);
+          if (!dateTime || dateTime < new Date()) {
+            return false;
+          }
+
+          const candidateStart = dateTime.getTime();
+          const candidateEnd = candidateStart + getMaxAppointmentTypeDurationMinutes(doctor.slotDuration) * 60 * 1000;
+          return !appointments.some((appointment) => {
+            const existingStart = new Date(appointment.dateTime).getTime();
+            const existingEnd = existingStart + appointment.duration * 60 * 1000;
+            return existingStart < candidateEnd && existingEnd > candidateStart;
+          });
+        }).length
+      : 0;
+
+    return {
+      ...doctor,
+      availableSlotsToday,
+    };
+  });
+
+  const sortedDoctors = [...doctorsWithStats].sort((a, b) => {
+    if (sort === "EXPERIENCE") {
+      return b.experience - a.experience;
+    }
+
+    if (sort === "SLOTS") {
+      return b.availableSlotsToday - a.availableSlotsToday;
+    }
+
+    return b.rating - a.rating || b.reviewCount - a.reviewCount;
   });
 
   return (
@@ -43,7 +102,7 @@ export default async function DoctorsPage({ searchParams }: Props) {
           <h1 className="text-4xl font-bold text-slate-900">👨‍⚕️ Дәрігерлер тізімі</h1>
         </header>
 
-        <form className="grid gap-3 rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm md:grid-cols-4" method="GET">
+        <form className="grid gap-3 rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm md:grid-cols-5" method="GET">
           <input
             name="q"
             defaultValue={q}
@@ -60,18 +119,27 @@ export default async function DoctorsPage({ searchParams }: Props) {
             <input type="checkbox" name="available" value="1" defaultChecked={availableOnly} className="cursor-pointer" />
             ✅ Тек бос дәрігерлер
           </label>
+          <select
+            name="sort"
+            defaultValue={sort}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+          >
+            <option value="RATING">Сұрыптау: рейтинг</option>
+            <option value="EXPERIENCE">Сұрыптау: тәжірибе</option>
+            <option value="SLOTS">Сұрыптау: бос слот саны</option>
+          </select>
           <button type="submit" className="rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-white font-semibold hover:shadow-lg transition">
             🔍 Іздеу
           </button>
         </form>
 
-        {doctors.length === 0 ? (
+        {sortedDoctors.length === 0 ? (
           <div className="rounded-2xl bg-white p-8 text-center ring-1 ring-slate-200 shadow-sm">
             <p className="text-slate-600 text-lg">😔 Дәрігер табылмады. Басқа критерийлер сынап көріңіз.</p>
           </div>
         ) : (
           <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {doctors.map((doctor) => (
+            {sortedDoctors.map((doctor) => (
               <article key={doctor.id} className="rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm hover:shadow-md transition-all">
                 <div className="flex items-start justify-between">
                   <div>
@@ -111,10 +179,14 @@ export default async function DoctorsPage({ searchParams }: Props) {
                       {doctor.isAvailable ? "✅ Қолжетімді" : "🚫 Бос емес"}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-600">🕒 Бүгін бос слот:</span>
+                    <span className="font-semibold text-cyan-700">{doctor.availableSlotsToday}</span>
+                  </div>
                 </div>
 
                 <div className="mt-5 flex gap-2">
-                  <Link href="/patient/appointments" className="flex-1 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-center text-sm font-semibold text-white hover:shadow-lg transition">
+                  <Link href={`/patient/appointments?doctorId=${doctor.id}`} className="flex-1 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-center text-sm font-semibold text-white hover:shadow-lg transition">
                     📅 Жазылу
                   </Link>
                   <Link href={`/patient/chat/${doctor.user.id}`} className="flex-1 rounded-lg border-2 border-cyan-600 px-3 py-2 text-center text-sm font-semibold text-cyan-600 hover:bg-cyan-50 transition">

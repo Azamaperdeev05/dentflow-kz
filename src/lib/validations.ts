@@ -46,6 +46,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Құпия сөзді енгізіңіз"),
 });
 
+export const loginEmailSchema = z.object({
+  email: z.string().email("Email форматы қате"),
+});
+
 export const loginOtpRequestSchema = z.object({
   email: z.string().email("Email форматы қате"),
   password: z.string().min(1, "Құпия сөзді енгізіңіз"),
@@ -89,6 +93,7 @@ export const resetPasswordSchema = z
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
+export type LoginEmailInput = z.infer<typeof loginEmailSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type LoginOtpRequestInput = z.infer<typeof loginOtpRequestSchema>;

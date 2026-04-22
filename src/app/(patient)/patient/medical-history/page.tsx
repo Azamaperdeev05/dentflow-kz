@@ -4,6 +4,8 @@ import { requirePatientPage } from "@/lib/session";
 import { getTreatmentStatusLabel } from "@/lib/kz-labels";
 import { ApproveTreatmentButton } from "@/components/patient/approve-treatment-button";
 import { parseTreatmentMeta, parseTreatmentStages } from "@/lib/treatment-plan";
+import { MedicalFileUploadForm } from "@/components/patient/medical-file-upload-form";
+import { FilePreviewButton } from "@/components/patient/file-preview-button";
 
 export default async function MedicalHistoryPage() {
   const { patientProfile } = await requirePatientPage();
@@ -117,6 +119,10 @@ export default async function MedicalHistoryPage() {
             Медициналық файлдар
           </h2>
 
+          <p className="mt-2 text-sm text-slate-600">Фото, рентген немесе құжатты жүктей аласыз. Жүктелген файл бірден деректер базасына сақталады.</p>
+
+          <MedicalFileUploadForm />
+
           {files.length === 0 ? (
             <div className="mt-4 rounded-xl bg-slate-50 p-6 text-center border border-slate-200">
               <p className="text-slate-600">😔 Файлдар жоқ</p>
@@ -143,10 +149,7 @@ export default async function MedicalHistoryPage() {
                       <td className="py-3 px-4 text-slate-700">{Math.round(file.size / 1024)} KB</td>
                       <td className="py-3 px-4 text-slate-700">{new Date(file.uploadedAt).toLocaleDateString("kk-KZ")}</td>
                       <td className="py-3 px-4">
-                        <a href={file.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg bg-cyan-100 px-3 py-1 text-sm font-semibold text-cyan-700 hover:bg-cyan-200 transition">
-                          <Image src="/icons/windows11-outline/messages.png" alt="" width={13} height={13} />
-                          Ашу
-                        </a>
+                        <FilePreviewButton url={file.url} name={file.name} type={file.type} />
                       </td>
                     </tr>
                   ))}

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { UnreadMessageCount } from "@/components/shared/unread-message-count";
 
 const links = [
   { href: "/doctor/dashboard", label: "Басты тақта", icon: "/icons/windows11-outline/dashboard.png" },
@@ -26,14 +27,17 @@ export function DoctorNav() {
             key={link.href}
             href={link.href}
             onClick={onNavigate}
-            className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
+            className={`flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-semibold transition-all ${
               isActive
                 ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm"
                 : "text-slate-700 hover:bg-slate-100"
             }`}
           >
-            <Image src={link.icon} alt="" width={18} height={18} className={`${isActive ? "opacity-100" : "opacity-80"}`} />
-            <span>{link.label}</span>
+            <div className="flex items-center gap-3">
+              <Image src={link.icon} alt="" width={18} height={18} className={`${isActive ? "opacity-100" : "opacity-80"}`} />
+              <span>{link.label}</span>
+            </div>
+            {link.href === "/doctor/messages" && <UnreadMessageCount />}
           </Link>
         );
       })}

@@ -10,6 +10,9 @@ type Props = {
   params: {
     date: string;
   };
+  searchParams?: {
+    doctorId?: string;
+  };
 };
 
 function formatSelectedDateLabel(dateKey: string) {
@@ -25,10 +28,11 @@ function formatSelectedDateLabel(dateKey: string) {
   }).format(parsed);
 }
 
-export default async function AppointmentDayPage({ params }: Props) {
+export default async function AppointmentDayPage({ params, searchParams }: Props) {
   await requirePatientPage();
 
   const selectedDate = params.date;
+  const doctorId = searchParams?.doctorId;
   const parsedDate = parseDayKey(selectedDate);
 
   if (!parsedDate) {
@@ -37,10 +41,16 @@ export default async function AppointmentDayPage({ params }: Props) {
 
   const startOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate());
   const endOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate() + 1);
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const isPastDay = startOfDay.getTime() < todayStart.getTime();
 
   const [doctors, dayAppointments] = await Promise.all([
     prisma.doctorProfile.findMany({
-      where: { isAvailable: true },
+      where: { 
+        isAvailable: true,
+        ...(doctorId ? { id: doctorId } : {})
+      },
       include: {
         user: { select: { name: true } },
       },
@@ -71,7 +81,7 @@ export default async function AppointmentDayPage({ params }: Props) {
         }
 
         const now = new Date();
-        if (getDayKey(dateTime) === getDayKey(now) && dateTime < now) {
+        if (dateTime < now) {
           return false;
         }
 
@@ -118,19 +128,25 @@ export default async function AppointmentDayPage({ params }: Props) {
         </header>
 
         <section className="rounded-2xl bg-white p-6 ring-1 ring-slate-200 shadow-sm">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-cyan-700">Таңдалған күн</p>
-              <h2 className="mt-2 text-2xl font-bold text-slate-900">{formatSelectedDateLabel(selectedDate)}</h2>
-              <p className="mt-2 text-sm text-slate-600">Дәрігерді таңдаңыз, кейін тек осы күнге қолжетімді уақыттарды көресіз.</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-cyan-700">Таңдалған күн</p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-900">{formatSelectedDateLabel(selectedDate)}</h2>
             </div>
-            <Link href="/patient/appointments" className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+            <Link 
+              href={doctorId ? `/patient/appointments?doctorId=${doctorId}` : "/patient/appointments"} 
+              className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
               ← Күнтізбеге қайту
             </Link>
           </div>
 
           <div className="mt-6">
-            {doctorsForDay.length === 0 ? (
+            {isPastDay ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
+                Өткен күнге жазылуға болмайды. Бүгінгі немесе келесі күнді таңдаңыз.
+              </div>
+            ) : doctorsForDay.length === 0 ? (
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-amber-800">
                 Бұл күнге жұмыс істейтін немесе бос уақыттары бар дәрігер табылмады. Басқа күнді таңдаңыз.
               </div>
