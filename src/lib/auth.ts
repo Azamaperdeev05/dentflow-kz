@@ -120,6 +120,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           throw new Error("EMAIL_NOT_VERIFIED");
         }
 
+        if (user.role === "DOCTOR" && user.doctorApprovalStatus !== "APPROVED") {
+          const reason = user.doctorApprovalStatus === "REJECTED" ? "DOCTOR_REJECTED" : "DOCTOR_PENDING_APPROVAL";
+          await logSecurityEvent({
+            userId: user.id,
+            userRole: user.role,
+            eventType: "AUTH",
+            action: "LOGIN_FAILED",
+            resource: "SESSION",
+            status: "DENIED",
+            ipAddress: meta.ipAddress,
+            userAgent: meta.userAgent,
+            deviceFingerprint: meta.deviceFingerprint,
+            metadata: { reason },
+          });
+          throw new Error(reason);
+        }
+
         if (user.twoFactorEnabled) {
           const secret = decryptSecret(user.twoFactorSecret);
           if (!secret) {

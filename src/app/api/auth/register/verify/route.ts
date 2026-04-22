@@ -44,6 +44,8 @@ export async function POST(req: Request) {
         return Response.json({ error: "Код қате немесе мерзімі өткен" }, { status: 400 });
       }
 
+      const isDoctor = pending.role === "DOCTOR";
+
       await prisma.user.create({
         data: {
           name: pending.name,
@@ -52,6 +54,7 @@ export async function POST(req: Request) {
           password: pending.passwordHash,
           role: pending.role,
           isVerified: true,
+          doctorApprovalStatus: isDoctor ? "PENDING" : null,
           ...(pending.role === "PATIENT"
             ? {
                 patientProfile: {
@@ -71,7 +74,12 @@ export async function POST(req: Request) {
       });
 
       await clearPendingRegistration(email);
-      return Response.json({ success: true, message: "Email сәтті расталды" });
+
+      const message = isDoctor
+        ? "Email расталды. Аккаунтыңыз әкімшінің бекітуін күтіп тұр."
+        : "Email сәтті расталды";
+
+      return Response.json({ success: true, message });
     }
 
     if (!user) {

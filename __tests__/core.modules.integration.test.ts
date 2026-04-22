@@ -136,7 +136,7 @@ describe("Core module integration", () => {
         isVerified: true,
         doctorProfile: {
           create: {
-            specialization: "Therapist",
+            specializations: JSON.stringify(["Therapist"]),
             isAvailable: true,
             workDays: JSON.stringify(["MON", "TUE", "WED", "THU", "FRI"]),
             workHoursStart: "09:00",
@@ -242,7 +242,7 @@ describe("Core module integration", () => {
         isVerified: true,
         doctorProfile: {
           create: {
-            specialization: "Orthodontist",
+            specializations: JSON.stringify(["Orthodontist"]),
             isAvailable: true,
             workDays: JSON.stringify(["MON", "TUE", "WED", "THU", "FRI"]),
           },
@@ -333,7 +333,7 @@ describe("Core module integration", () => {
         isVerified: true,
         doctorProfile: {
           create: {
-            specialization: "Surgeon",
+            specializations: JSON.stringify(["Surgeon"]),
           },
         },
       },
@@ -347,6 +347,19 @@ describe("Core module integration", () => {
         name: "Patient Chat",
         isVerified: true,
         patientProfile: { create: {} },
+      },
+    });
+
+    const doctorProfileId = (await prisma.doctorProfile.findUnique({ where: { userId: doctorUser.id }, select: { id: true } }))!.id;
+    const patientProfileId = (await prisma.patientProfile.findUnique({ where: { userId: patientUser.id }, select: { id: true } }))!.id;
+
+    await prisma.appointment.create({
+      data: {
+        doctorId: doctorProfileId,
+        patientId: patientProfileId,
+        dateTime: new Date(Date.now() + 86400000),
+        status: "CONFIRMED",
+        type: "CONSULTATION",
       },
     });
 

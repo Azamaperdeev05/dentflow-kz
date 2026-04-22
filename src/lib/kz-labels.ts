@@ -39,3 +39,14 @@ export function getAppointmentTypeLabel(type: string): string {
 export function getPaymentMethodLabel(method: string): string {
   return paymentMethodLabels[method] ?? method;
 }
+
+const doctorApprovalStatusLabels: Record<string, string> = {
+  PENDING: "⏳ Бекіту күтіліп тұр",
+  APPROVED: "✅ Бекітілді",
+  REJECTED: "❌ Қабылданбады",
+};
+
+export function getDoctorApprovalStatusLabel(status: string | null): string {
+  if (!status) return "✅ Бекітілді";
+  return doctorApprovalStatusLabels[status] ?? status;
+}

@@ -90,7 +90,14 @@ export default function LoginPage() {
       });
 
       if (!result || result.error) {
-        setServerError(requiresTwoFactor ? "2FA коды қате." : uiFeedback.authInvalidCredentials);
+        const errorCode = result?.error ?? "";
+        if (errorCode === "DOCTOR_PENDING_APPROVAL") {
+          setServerError("Аккаунтыңыз әкімшінің бекітуін күтіп тұр. Хабарлама алғаннан кейін кіріңіз.");
+        } else if (errorCode === "DOCTOR_REJECTED") {
+          setServerError("Тіркелу өтінімі қабылданбады. Толығырақ ақпарат үшін байланысыңыз.");
+        } else {
+          setServerError(requiresTwoFactor ? "2FA коды қате." : uiFeedback.authInvalidCredentials);
+        }
         return;
       }
 

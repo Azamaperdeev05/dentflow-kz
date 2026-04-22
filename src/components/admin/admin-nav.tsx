@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const links = [
+  { href: "/admin/dashboard", label: "Дашборд", icon: "/icons/windows11-outline/dashboard.png" },
+  { href: "/admin/doctors", label: "Дәрігерлер", icon: "/icons/windows11-outline/doctor.png" },
   { href: "/admin/security", label: "Қауіпсіздік панелі", icon: "/icons/windows11-outline/settings.png" },
   { href: "/admin/profile", label: "Профиль және 2FA", icon: "/icons/windows11-outline/profile.png" },
 ];

@@ -8,7 +8,11 @@
       "Bash(curl -L https://api.github.com/repos/affaan-m/everything-claude-code/readme -H 'Accept: application/vnd.github.raw')",
       "Bash(gh api:*)",
       "Bash(npx next:*)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(npm run *)",
+      "Bash(npx prisma *)",
+      "Bash(mkdir -p \"/c/Users/Acer/Desktop/Dent/dentflow-kz/src/app/api/admin/doctors/[userId]/approve\")",
+      "Bash(mkdir -p \"/c/Users/Acer/Desktop/Dent/dentflow-kz/src/app/api/admin/doctors/[userId]/reject\")"
     ]
   }
 }

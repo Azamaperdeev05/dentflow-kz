@@ -9,6 +9,7 @@ export default defineConfig({
     setupFiles: ["./__tests__/setup/test-env.ts"],
     testTimeout: 30000,
     hookTimeout: 30000,
+    fileParallelism: false,
   },
   resolve: {
     alias: {
