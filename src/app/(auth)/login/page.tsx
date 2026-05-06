@@ -47,10 +47,24 @@ export default function LoginPage() {
         body: JSON.stringify(parsedEmail.data),
       });
 
-      const precheckData = (await precheckResponse.json()) as { error?: string; requiresTwoFactor?: boolean };
+      const precheckData = (await precheckResponse.json()) as {
+        error?: string;
+        requiresTwoFactor?: boolean;
+        doctorApprovalStatus?: string | null;
+      };
 
       if (!precheckResponse.ok) {
         setServerError(precheckResponse.status === 401 ? uiFeedback.authInvalidCredentials : precheckData.error ?? uiFeedback.genericError);
+        return;
+      }
+
+      if (precheckData.doctorApprovalStatus === "PENDING") {
+        setServerError("Аккаунтыңыз әкімшінің бекітуін күтіп тұр. Алдымен бекітілгенін күтіңіз.");
+        return;
+      }
+
+      if (precheckData.doctorApprovalStatus === "REJECTED") {
+        setServerError("Тіркелу өтінімі қабылданбаған. Әкімшімен хабарласыңыз.");
         return;
       }
 

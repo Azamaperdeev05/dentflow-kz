@@ -23,12 +23,14 @@ export default async function TreatmentPlanPage({ params }: Props) {
       user: { select: { id: true, name: true, phone: true, email: true } },
       appointments: {
         where: { doctorId: doctorProfile.id },
-        select: { id: true },
+        select: { id: true, dateTime: true },
+        orderBy: { dateTime: "desc" },
+        take: 1,
       },
     },
   });
 
-  if (!patient || patient.appointments.length === 0) {
+  if (!patient) {
     notFound();
   }
 
@@ -54,6 +56,7 @@ export default async function TreatmentPlanPage({ params }: Props) {
       <div className="rounded-xl bg-white p-5 ring-1 ring-slate-200 text-sm text-slate-700">
         <p>Телефон: {patient.user.phone || "-"}</p>
         <p>Email: {patient.user.email}</p>
+        <p>Сізбен қабылдау: {patient.appointments.length > 0 ? new Date(patient.appointments[0].dateTime).toLocaleString("kk-KZ") : "Әлі болған жоқ"}</p>
       </div>
 
       <section className="rounded-xl bg-white p-5 ring-1 ring-slate-200">

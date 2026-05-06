@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { requireAdminPage } from "@/lib/session";
+import { getSecurityActionLabel } from "@/lib/kz-labels";
 
 type Props = {
   searchParams?: {
@@ -155,7 +156,7 @@ export default async function AdminSecurityPage({ searchParams }: Props) {
             <select name="action" defaultValue={searchParams?.action ?? ""} className="mt-1 h-10 w-full rounded-lg border border-slate-300 px-3">
               <option value="">Барлығы</option>
               {allActions.map((item) => (
-                <option key={item.action} value={item.action}>{item.action}</option>
+                <option key={item.action} value={item.action}>{getSecurityActionLabel(item.action)}</option>
               ))}
             </select>
           </label>

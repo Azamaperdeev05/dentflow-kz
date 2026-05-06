@@ -36,6 +36,7 @@ export async function POST(req: Request) {
         role: true,
         isVerified: true,
         twoFactorEnabled: true,
+        doctorApprovalStatus: true,
       },
     });
 
@@ -78,9 +79,18 @@ export async function POST(req: Request) {
       return Response.json({ error: "Email расталмаған" }, { status: 403 });
     }
 
+    if (user.role === "DOCTOR" && user.doctorApprovalStatus !== "APPROVED") {
+      return Response.json({
+        success: true,
+        requiresTwoFactor: false,
+        doctorApprovalStatus: user.doctorApprovalStatus,
+      });
+    }
+
     return Response.json({
       success: true,
       requiresTwoFactor: user.twoFactorEnabled,
+      doctorApprovalStatus: user.doctorApprovalStatus,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "CSRF_INVALID") {

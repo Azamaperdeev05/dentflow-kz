@@ -1,14 +1,18 @@
 import { prisma } from "@/lib/db";
 
 export async function canDoctorAccessPatient(doctorProfileId: string, patientProfileId: string) {
-  const relationCount = await prisma.appointment.count({
-    where: {
-      doctorId: doctorProfileId,
-      patientId: patientProfileId,
-    },
-  });
+  const [doctor, patient] = await Promise.all([
+    prisma.doctorProfile.findUnique({
+      where: { id: doctorProfileId },
+      select: { id: true },
+    }),
+    prisma.patientProfile.findUnique({
+      where: { id: patientProfileId },
+      select: { id: true },
+    }),
+  ]);
 
-  return relationCount > 0;
+  return Boolean(doctor && patient);
 }
 
 export async function canUsersChat(senderId: string, receiverId: string) {

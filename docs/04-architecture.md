@@ -1,50 +1,122 @@
-# 04. Жүйе архитектурасы
+# 4. Архитектура және технологиялық шешімдер
 
-## 1. Архитектуралық стиль
+## 4.1 Жалпы архитектура
 
-DentFlow KZ көпқабатты веб-архитектурамен құрылған:
+DentFlow KZ — көпқабатты (N-tier) клиент-сервер архитектурасымен құрылған. Next.js App Router SSR/CSR гибридті рендеринг ұсынады.
 
-1. Presentation қабаты: Next.js App Router, React компоненттер.
-2. Application/API қабаты: Route Handlers (`src/app/api/...`).
-3. Domain/Service қабаты: `src/lib` (auth, session, validation, security, rbac).
-4. Data қабаты: Prisma ORM және SQLite.
+```
+┌─────────────────────────────────────────────────┐
+│              Client (Browser)                    │
+│  React 18 + TypeScript + Tailwind CSS           │
+├─────────────────────────────────────────────────┤
+│         Next.js 14 App Router                    │
+│   ┌─────────────┐  ┌──────────────────┐         │
+│   │  Pages/SSR   │  │  API Routes      │         │
+│   │  (patient)   │  │  /api/auth/*     │         │
+│   │  (doctor)    │  │  /api/patient/*  │         │
+│   │  (admin)     │  │  /api/doctor/*   │         │
+│   │  (auth)      │  │  /api/admin/*    │         │
+│   └─────────────┘  └──────────────────┘         │
+├─────────────────────────────────────────────────┤
+│              Business Logic Layer                │
+│   src/lib/ (auth, rbac, validation, crypto)     │
+├─────────────────────────────────────────────────┤
+│              Data Access Layer                   │
+│   Prisma ORM → SQLite (dev.db)                  │
+└─────────────────────────────────────────────────┘
+```
 
-## 2. Негізгі компоненттер
+## 4.2 Route Group архитектурасы
 
-- UI беттері: auth, patient, doctor, admin бөлімдері.
-- API маршруттары: auth, appointments, treatments, payments, messages, notifications, upload.
-- Auth ядросы: NextAuth credentials provider.
-- Security ядросы: audit-log, security-risk, rbac.
+Next.js App Router route groups арқылы рөлдерді бөлу:
 
-## 3. Дерек ағыны (жалпы)
+| Route Group | Мақсаты | Layout |
+|-------------|---------|--------|
+| `(auth)` | Login, Register, Forgot Password | Минималистік |
+| `(patient)` | Пациент панелі | PatientHeader + PatientNav |
+| `(doctor)` | Дәрігер панелі | DoctorHeader + DoctorNav |
+| `(admin)` | Админ панелі | AdminHeader + AdminNav |
 
-1. Клиент форма жібереді.
-2. API route request-ті қабылдайды.
-3. Zod схема валидация жасайды.
-4. Session/role тексерісі жасалады.
-5. Prisma арқылы DB операциясы орындалады.
-6. Қауіпсіздік оқиғасы логқа жазылады (маңызды операциялар үшін).
-7. JSON response қайтарылады.
+## 4.3 Технология таңдау негіздемесі
 
-## 4. Рөлдік бақылау архитектурасы
+| Технология | Неге таңдалды |
+|------------|---------------|
+| **Next.js 14** | SSR/SSG, API Routes, App Router — full-stack мүмкіндік |
+| **TypeScript** | Типтік қауіпсіздік, IDE қолдауы, қате азайту |
+| **Prisma** | Type-safe ORM, автоматты миграция, studio |
+| **SQLite** | Нөлдік конфигурация, demo/dev үшін жеткілікті |
+| **NextAuth.js** | Credentials + 2FA оңай интеграция |
+| **Zod** | Runtime валидация, TypeScript типтерімен интеграция |
+| **Tailwind CSS** | Utility-first, жылдам прототиптеу |
+| **AES-256-CBC** | Медициналық деректер шифрлау стандарты |
+| **Nodemailer** | Gmail SMTP арқылы OTP/notification жіберу |
 
-- Middleware URL деңгейінде рөлдерді бағыттайды.
-- `requirePatient`, `requireDoctor`, `requireAdmin` серверлік тексеріс жасайды.
-- RBAC утилиттері нақты бизнес-рұқсатты тексереді (мысалы, doctor-patient байланысы).
+## 4.4 Компонент архитектурасы
 
-## 5. Модульаралық байланыс
+```
+src/components/
+├── patient/                    # Пациент компоненттері
+│   ├── patient-nav.tsx         # Навигация (sidebar)
+│   ├── patient-header.tsx      # Жоғарғы хедер
+│   ├── patient-profile-editor.tsx # Профиль өңдеу (көру/өзгерту toggle)
+│   ├── appointment-calendar.tsx   # Күнтізбелі жазылу
+│   ├── doctor-list.tsx         # Дәрігерлер тізімі
+│   └── medical-history-list.tsx   # Медициналық тарих
+├── doctor/
+│   ├── doctor-nav.tsx          # Дәрігер навигациясы
+│   ├── doctor-profile-editor.tsx  # Профиль өңдеу
+│   ├── treatment-form.tsx      # Емдеу жоспар формасы
+│   ├── payment-form.tsx        # Төлем формасы
+│   └── finance-dashboard.tsx   # Қаржылық дашборд
+├── admin/
+│   ├── admin-nav.tsx           # Админ навигациясы
+│   └── security-dashboard.tsx  # Қауіпсіздік панелі
+└── shared/
+    ├── chat-box.tsx            # Шифрланған чат
+    ├── two-factor-settings.tsx # 2FA баптау
+    └── notification-bell.tsx   # Хабарландыру қоңырауы
+```
 
-- `src/lib/session.ts` API және page-де қайта қолданылады.
-- `src/lib/validations.ts` барлық формалар мен endpoint-терге ортақ.
-- `src/lib/audit-log.ts` қауіпсіздік оқиғаларын орталықтандырады.
+## 4.5 Деректер ағымы (Data Flow)
 
-## 6. Архитектура артықшылықтары
+```
+1. Пайдаланушы → UI форма толтырады
+2. Client → Zod валидация (client-side)
+3. Client → API Route (POST/PATCH/GET)
+4. Server → Session тексерісі (requirePatient/Doctor/Admin)
+5. Server → enforceMutationGuard (CSRF + Rate limit)
+6. Server → Zod валидация (server-side)
+7. Server → Prisma → SQLite (CRUD)
+8. Server → Audit Log жазу (маңызды әрекеттер)
+9. Server → JSON Response қайтару
+10. Client → UI жаңарту (router.refresh)
+```
 
-- Код модульдігі жоғары.
-- Қауіпсіздік логикасы оқшауланған.
-- Жаңа рөлдер немесе модульдер қосуға ыңғайлы.
+## 4.6 Қауіпсіздік архитектурасы
 
-## 7. Шектеулер
-
-- SQLite concurrent write сценарийлерінде lock бере алады.
-- Үлкен жүктемеде PostgreSQL сияқты серверлік СУБД тиімдірек.
+```
+Request Flow:
+  ┌─────────┐    ┌──────────┐    ┌───────────┐    ┌────────┐
+  │ Client   │ →  │ Middleware │ →  │ Session    │ →  │ RBAC   │
+  │          │    │ (routing) │    │ Guard      │    │ Check  │
+  └─────────┘    └──────────┘    └───────────┘    └────────┘
+                                                       │
+                                       ┌───────────────┤
+                                       ↓               ↓
+                                 ┌──────────┐   ┌────────────┐
+                                 │ Zod      │   │ Mutation   │
+                                 │ Validate │   │ Guard      │
+                                 └──────────┘   │ (CSRF+RL)  │
+                                       │        └────────────┘
+                                       ↓
+                                 ┌──────────┐
+                                 │ Prisma   │
+                                 │ DB Query │
+                                 └──────────┘
+                                       │
+                                       ↓
+                                 ┌──────────┐
+                                 │ Audit    │
+                                 │ Log      │
+                                 └──────────┘
+```

@@ -1,79 +1,130 @@
-# 05. Деректер базасын жобалау
+# 5. Деректер базасын жобалау
 
-## 1. Қолданылған СУБД
+## 5.1 ДББЖ таңдау
 
-- SQLite
-- ORM: Prisma
+| Параметр | Мәні |
+|----------|------|
+| **ДББЖ** | SQLite (dev), PostgreSQL-ready (production) |
+| **ORM** | Prisma 5.x |
+| **Кесте саны** | 16 |
+| **Байланыс** | 1:1, 1:N қатынастары |
 
-## 2. Негізгі кестелер
+## 5.2 ER-диаграмма (Entity Relationship)
 
-### Identity және қауіпсіздік
+```
+┌───────────────┐     1:1     ┌──────────────────┐
+│     User      │────────────▶│  PatientProfile   │
+│  (id, email,  │             │  (birthDate,      │
+│   password,   │             │   gender, blood,  │
+│   role, 2FA)  │             │   allergies)      │
+│               │     1:1     ├──────────────────┤
+│               │────────────▶│  DoctorProfile    │
+│               │             │  (specializations,│
+│               │             │   workDays, slot)  │
+└───────┬───────┘             └──────────────────┘
+        │
+        │ 1:N
+        ├──────────────▶ Appointment (dateTime, status, complaint)
+        │                    │
+        │                    └───▶ AppointmentSlot
+        │
+        ├──────────────▶ Treatment (diagnosis, procedures, totalCost, status)
+        │                    │
+        │                    └───▶ Payment (amount, method, note)
+        │
+        ├──────────────▶ Message (content[encrypted], fileUrl, isRead)
+        │
+        ├──────────────▶ Notification (title, message, isRead)
+        │
+        ├──────────────▶ MedicalFile (fileName, fileUrl, fileType)
+        │
+        ├──────────────▶ SecurityAuditLog (eventType, action, resource)
+        │
+        ├──────────────▶ LoginRiskSignal (ipAddress, riskScore)
+        │
+        ├──────────────▶ LoginOtp (code, expiresAt)
+        │
+        ├──────────────▶ PasswordReset (token, expiresAt)
+        │
+        └──────────────▶ PendingRegistration (email, code)
+                         RateLimitAttempt (key, identity, timestamp)
+```
 
-- User
-- PendingRegistration
-- PasswordReset
-- LoginOtp
-- RateLimitAttempt
-- SecurityAuditLog
-- LoginRiskSignal
+## 5.3 Негізгі кестелер сипаттамасы
 
-### Клиникалық процесс
+### User (Қолданушы)
+| Өріс | Тип | Сипаттамасы |
+|------|-----|-------------|
+| id | String (cuid) | Бірегей ID |
+| email | String (unique) | Email мекенжайы |
+| password | String | bcrypt хэш |
+| role | Enum (PATIENT/DOCTOR/ADMIN) | Рөлі |
+| name | String | Аты-жөні |
+| phone | String? | Телефон |
+| isVerified | Boolean | Email расталған ба |
+| twoFactorEnabled | Boolean | 2FA қосылған ба |
+| twoFactorSecret | String? | TOTP құпия кілт |
+| doctorApprovalStatus | Enum? | Дәрігер бекіту статусы |
 
-- PatientProfile
-- DoctorProfile
-- Appointment
-- AppointmentSlot
-- Treatment
-- Payment
+### PatientProfile (Пациент профилі)
+| Өріс | Тип | Сипаттамасы |
+|------|-----|-------------|
+| id | String (cuid) | Бірегей ID |
+| userId | String (unique) | User-ге сілтеме |
+| birthDate | DateTime? | Туған күні |
+| gender | String? | Жынысы (MALE/FEMALE) |
+| region | String? | Облыс |
+| address | String? | Мекенжай |
+| bloodType | String? | Қан тобы |
+| allergies | String? | Аллергия (JSON) |
+| notes | String? | Ескертпе |
 
-### Коммуникация
+### DoctorProfile (Дәрігер профилі)
+| Өріс | Тип | Сипаттамасы |
+|------|-----|-------------|
+| id | String (cuid) | Бірегей ID |
+| userId | String (unique) | User-ге сілтеме |
+| specializations | String? | Мамандықтар (JSON) |
+| experience | Int? | Тәжірибе жылы |
+| licenseNumber | String? | Лицензия нөмірі |
+| education | String? | Білімі |
+| about | String? | Өзі туралы |
+| rating | Float | Рейтинг (default: 0) |
+| isAvailable | Boolean | Қолжетімді ме |
+| workDays | String? | Жұмыс күндері (JSON) |
+| workHoursStart | String? | Бастау уақыты |
+| workHoursEnd | String? | Аяқтау уақыты |
+| slotDuration | Int | Слот ұзақтығы (минут) |
 
-- Message
-- Notification
-- MedicalFile
+### Appointment (Қабылдау)
+| Өріс | Тип | Сипаттамасы |
+|------|-----|-------------|
+| id | String (cuid) | Бірегей ID |
+| patientId | String | PatientProfile.id |
+| doctorId | String | DoctorProfile.id |
+| dateTime | DateTime | Қабылдау уақыты |
+| status | Enum | SCHEDULED/COMPLETED/CANCELLED/NO_SHOW |
+| complaint | String? | Шағым |
+| type | String? | Қабылдау түрі |
 
-## 3. Маңызды өрістер
+### Treatment (Емдеу жоспары)
+| Өріс | Тип | Сипаттамасы |
+|------|-----|-------------|
+| id | String (cuid) | Бірегей ID |
+| patientId | String | PatientProfile.id |
+| doctorId | String | DoctorProfile.id |
+| appointmentId | String? | Қабылдауға сілтеме |
+| diagnosis | String | Диагноз |
+| procedures | String | Процедуралар |
+| totalCost | Float | Жалпы құн |
+| status | Enum | PENDING/APPROVED/REJECTED/IN_PROGRESS/COMPLETED |
 
-- `User.role`: PATIENT/DOCTOR/ADMIN.
-- `DoctorProfile.specializations`: JSON string түрінде көптік мамандық.
-- `Appointment.status`: қабылдаудың lifecycle күйі.
-- `Treatment.totalCost`, `Treatment.paidAmount`: қаржылық есеп.
-- `SecurityAuditLog`: әрекет, ресурс, статус, тәуекел, IP/UserAgent.
-- `LoginRiskSignal`: сәтсіз әрекеттер мен risk score.
+## 5.4 Индекстер
 
-## 4. Байланыстар
-
-- User -> PatientProfile (1:1)
-- User -> DoctorProfile (1:1)
-- PatientProfile -> Appointment (1:N)
-- DoctorProfile -> Appointment (1:N)
-- Appointment -> Treatment (1:0..1)
-- Treatment -> Payment (1:N)
-- User -> Message (sender/receiver қатынастары)
-
-## 5. Индекстер және өнімділік
-
-Schema-де жиі сұралатын өрістер үшін индекстер берілген:
-
-- `createdAt`, `status`, `action`, `isSuspicious`, `riskScore`
-- `dateTime`, `doctorId`, `patientId`
-- `senderId`, `receiverId`, `isRead`
-
-## 6. Нормализация
-
-Жалпы модель 3NF-қа жақын жобаланған.
-
-- Қайталанатын құрылымдар жеке кестеге шығарылған.
-- Жеке кейбір икемді өрістер JSON форматта сақталады (specializations, workDays, procedures).
-
-## 7. Миграция саясаты
-
-- Prisma migrations арқылы версиялау.
-- Schema өзгерістері migration файлдармен тіркеледі.
-- Production-та backup жасап барып migration қолдану керек.
-
-## 8. Болашақта кеңейту
-
-- SQLite -> PostgreSQL көшу.
-- Reporting үшін материалданған view/analytics schema қосу.
-- Multi-clinic режиміне tenant өрістерін енгізу.
+Жүйеде Prisma автоматты индекстерден басқа:
+- `User.email` — unique index
+- `PatientProfile.userId` — unique index
+- `DoctorProfile.userId` — unique index
+- `Appointment(patientId, dateTime)` — composite lookup
+- `Message(senderId, receiverId)` — чат іздеу
+- `SecurityAuditLog(userId, createdAt)` — аудит сұрау

@@ -15,43 +15,31 @@ export default async function DoctorPatientsPage({ searchParams }: Props) {
   const { user, doctorProfile } = await requireDoctorPage();
   const q = searchParams.q?.trim() ?? "";
 
-  const appointments = await prisma.appointment.findMany({
-    where: {
-      doctorId: doctorProfile.id,
-      ...(q
-        ? {
-            patient: {
+    const patients = await prisma.patientProfile.findMany({
+      where: {
+        ...(q
+          ? {
               user: {
                 OR: [
                   { name: { contains: q } },
                   { phone: { contains: q } },
                 ],
               },
-            },
-          }
-        : {}),
-    },
-    include: {
-      patient: {
-        include: {
-          user: {
-            select: { name: true, phone: true, email: true },
-          },
+            }
+          : {}),
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, phone: true, email: true },
+        },
+        appointments: {
+          where: { doctorId: doctorProfile.id },
+          select: { id: true, dateTime: true },
+          orderBy: { dateTime: "desc" },
+          take: 1,
         },
       },
-    },
-    orderBy: { dateTime: "desc" },
-  });
-
-  const seen = new Set<string>();
-  const patients = appointments
-    .map((item) => item.patient)
-    .filter((item) => {
-      if (seen.has(item.id)) {
-        return false;
-      }
-      seen.add(item.id);
-      return true;
+      orderBy: { user: { name: "asc" } },
     });
 
   await logSecurityEvent({
@@ -100,14 +88,23 @@ export default async function DoctorPatientsPage({ searchParams }: Props) {
                     <h2 className="inline-flex items-center gap-2 font-bold text-slate-900 text-lg"><Image src="/icons/windows11-outline/profile.png" alt="" width={16} height={16} />{patient.user.name}</h2>
                     <p className="text-sm text-slate-600 mt-1">{patient.user.phone || "Телефон жоқ"}</p>
                     <p className="text-sm text-slate-600">{patient.user.email}</p>
+                    <p className="mt-2 text-xs font-medium text-cyan-700">
+                      {patient.appointments.length > 0 ? "Сізбен байланыс бар" : "Бұрын қабылдау болмаған"}
+                    </p>
                   </div>
                   <div className="flex gap-2 mt-3">
                     <Link href={`/doctor/treatment/${patient.id}`} className="flex-1 rounded-lg bg-gradient-to-r from-cyan-600 to-blue-600 px-3 py-2 text-sm font-semibold text-white hover:shadow-lg transition text-center">
                       <span className="inline-flex items-center gap-2"><Image src="/icons/windows11-outline/treatment.png" alt="" width={15} height={15} />Емдеу</span>
                     </Link>
-                    <Link href={`/doctor/chat/${patient.userId}`} className="flex-1 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 transition text-center">
-                      <span className="inline-flex items-center gap-2"><Image src="/icons/windows11-outline/messages.png" alt="" width={15} height={15} />Чат</span>
-                    </Link>
+                    {patient.appointments.length > 0 ? (
+                      <Link href={`/doctor/chat/${patient.user.id}`} className="flex-1 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-700 hover:bg-cyan-100 transition text-center">
+                        <span className="inline-flex items-center gap-2"><Image src="/icons/windows11-outline/messages.png" alt="" width={15} height={15} />Чат</span>
+                      </Link>
+                    ) : (
+                      <span className="flex-1 rounded-lg border border-slate-200 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-400 text-center">
+                        Чат жоқ
+                      </span>
+                    )}
                   </div>
                 </article>
               ))}
